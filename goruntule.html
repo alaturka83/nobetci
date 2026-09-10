@@ -95,8 +95,10 @@ table.data td.stat-num-cell.stat-high{color:#B3261E;}
 table.data td.stat-num-cell.stat-low{color:#8A5D14;}
 
 /* ---- Sanal Asistan ---- */
-.asistan-fab{position:fixed;right:14px;bottom:14px;z-index:400;width:52px;height:52px;border-radius:50%;background:var(--navy);color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 14px rgba(20,25,40,.3);display:flex;align-items:center;justify-content:center;}
-.asistan-fab .dot{position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--gold);border:2px solid var(--navy);display:none;}
+.asistan-fab{position:fixed;left:14px;bottom:14px;z-index:400;height:48px;border-radius:26px;background:var(--navy);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(20,25,40,.3);display:flex;align-items:center;gap:8px;padding:0 16px 0 12px;}
+.asistan-fab .ico{font-size:20px;}
+.asistan-fab .txt{font-weight:800;font-size:12.5px;white-space:nowrap;}
+.asistan-fab .dot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--gold);border:2px solid var(--navy);display:none;}
 .asistan-fab.uyari .dot{display:block;}
 .asistan-backdrop{position:fixed;inset:0;background:rgba(10,15,25,.45);z-index:410;display:none;}
 .asistan-backdrop.acik{display:block;}
@@ -147,7 +149,7 @@ table.data td.stat-num-cell.stat-low{color:#8A5D14;}
   <div id="app"><div class="msg">YÜKLENİYOR…</div></div>
 </div>
 
-<button class="asistan-fab" id="asistanFab" aria-label="Sanal Asistan">💬<span class="dot"></span></button>
+<button class="asistan-fab" id="asistanFab" aria-label="Sanal Asistan"><span class="ico">💬</span><span class="txt">Yalçın'a Sor</span><span class="dot"></span></button>
 <div class="asistan-backdrop" id="asistanBackdrop"></div>
 <div class="asistan-panel" id="asistanPanel">
   <div class="asistan-head">
@@ -550,6 +552,9 @@ const asistanGunSira = ['PAZAR','PAZARTESİ','SALI','ÇARŞAMBA','PERŞEMBE','CU
 function asistanIlkYuklemeyiIsaretle(){
   if(asistanOtoAcildi) return;
   asistanOtoAcildi = true;
+  // Mobilde (dar ekran) sayfa açılır açılmaz asistanı otomatik açmıyoruz —
+  // sadece sol alttaki "Yalçın'a Sor" baloncuğu duruyor, dokununca açılır.
+  if(window.innerWidth < 640) return;
   setTimeout(()=>{ asistanAc(true); }, 400);
 }
 
