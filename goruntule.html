@@ -31,16 +31,6 @@ body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:va
 .donem-list button.active{background:var(--gold);color:#fff;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 1px 2px rgba(20,25,40,.04);}
 .card h2{font-size:13.5px;margin:0 0 10px;color:var(--navy);line-height:1.35;}
-.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px;}
-table.data{width:100%;border-collapse:collapse;font-size:12.5px;}
-table.data th, table.data td{border:1px solid var(--line);padding:8px 8px;text-align:center;vertical-align:middle;min-width:78px;}
-table.data th{background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:11px;white-space:nowrap;}
-table.data th:first-child, table.data td.yer{
-  position:sticky;left:0;z-index:2;
-  background:var(--navy-soft);font-weight:700;color:var(--navy);text-align:left;
-  min-width:84px;max-width:110px;box-shadow:2px 0 3px rgba(20,25,40,.06);
-}
-table.data th:first-child{z-index:3;}
 .empty{color:#B7BDC9;}
 .msg{padding:40px 16px;text-align:center;color:var(--muted);font-size:14px;}
 .refresh{border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:12px;padding:9px 14px;border-radius:9px;cursor:pointer;min-height:40px;}
@@ -49,9 +39,31 @@ table.data th:first-child{z-index:3;}
 .filter-item label{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.3px;}
 .filter-item select{border:1.5px solid var(--line);border-radius:9px;padding:11px 10px;font-size:16px;font-family:inherit;color:var(--text);background:#fff;min-height:44px;width:100%;}
 .filter-clear{border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:13px;padding:11px 14px;border-radius:9px;cursor:pointer;min-height:44px;width:100%;}
-tr.row-hidden{display:none;}
-.cell-match{background:var(--gold-soft);font-weight:800;color:#8A5D14;border-radius:5px;padding:3px 4px;}
-.cell-dim{opacity:.3;}
+.cell-match{background:var(--gold-soft);font-weight:800;color:#8A5D14;border-radius:5px;padding:2px 6px;display:inline-block;}
+.cell-dim{opacity:.35;}
+
+/* ---- Mobil: dikey kart görünümü (varsayılan) ---- */
+.desktop-table{display:none;}
+.mobile-cards{display:block;}
+.yer-block{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+.yer-block.yer-hidden{display:none;}
+.yer-block-title{background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:13px;padding:10px 12px;}
+.day-row{display:flex;padding:10px 12px;border-top:1px solid var(--line);gap:10px;}
+.day-row .day-label{flex:0 0 92px;font-size:11.5px;font-weight:800;color:var(--muted);padding-top:2px;}
+.day-row .day-names{flex:1;font-size:13.5px;line-height:1.5;}
+.day-row .day-names .isim{display:block;}
+.day-row .day-names .isim + .isim{margin-top:2px;}
+
+@media (min-width: 640px){
+  .desktop-table{display:block;}
+  .mobile-cards{display:none;}
+}
+
+/* ---- Masaüstü tablo (≥640px) ---- */
+table.data{width:100%;border-collapse:collapse;font-size:13px;}
+table.data th, table.data td{border:1px solid var(--line);padding:9px 10px;text-align:center;vertical-align:middle;}
+table.data th{background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:12px;}
+table.data td.yer{background:var(--navy-soft);font-weight:700;color:var(--navy);text-align:left;}
 
 @media (min-width: 640px){
   .wrap{padding:22px 16px 60px;}
@@ -64,11 +76,6 @@ tr.row-hidden{display:none;}
   .donem-list{flex-wrap:wrap;overflow-x:visible;}
   .card{padding:20px;}
   .card h2{font-size:15px;}
-  .table-scroll{margin:0;padding:0;}
-  table.data{font-size:13px;}
-  table.data th, table.data td{padding:9px 10px;min-width:auto;}
-  table.data th{font-size:12px;white-space:normal;}
-  table.data th:first-child, table.data td.yer{position:static;box-shadow:none;max-width:none;}
   .refresh{float:right;}
   .filter-bar{flex-direction:row;flex-wrap:wrap;padding:14px 16px;}
   .filter-item{min-width:180px;flex:1;}
@@ -138,13 +145,28 @@ function formatDateTR(dateStr){
 
 function renderAyTablosu(ay, grup, siraNo){
   const yerler = veri.yerler || [];
+
+  // Masaüstü tablo
   const rows = yerler.map(y=>{
     const gizli = filtreYer && y.id !== filtreYer;
     const cells = GUNLER.map(g=>{
       const ids = ay.tablo && ay.tablo[y.id] ? ay.tablo[y.id][g] : [];
       return `<td>${renderHucre(ids, grup)}</td>`;
     }).join('');
-    return `<tr class="${gizli ? 'row-hidden' : ''}"><td class="yer">${esc(y.ad)}</td>${cells}</tr>`;
+    return `<tr style="${gizli ? 'display:none;' : ''}"><td class="yer">${esc(y.ad)}</td>${cells}</tr>`;
+  }).join('');
+
+  // Mobil dikey kartlar
+  const yerBloklari = yerler.map(y=>{
+    const gizli = filtreYer && y.id !== filtreYer;
+    const gunSatirlari = GUNLER.map(g=>{
+      const ids = ay.tablo && ay.tablo[y.id] ? ay.tablo[y.id][g] : [];
+      return `<div class="day-row"><div class="day-label">${g}</div><div class="day-names">${renderHucre(ids, grup)}</div></div>`;
+    }).join('');
+    return `<div class="yer-block ${gizli ? 'yer-hidden' : ''}">
+      <div class="yer-block-title">${esc(y.ad)}</div>
+      ${gunSatirlari}
+    </div>`;
   }).join('');
 
   const tarihAraligi = (ay.baslangicTarihi && ay.bitisTarihi)
@@ -154,7 +176,8 @@ function renderAyTablosu(ay, grup, siraNo){
   return `
   <div class="card">
     <h2>${esc((ay.ayEtiket || '').replace(/\s*\d{4}$/, ''))} PROGRAMI${tarihAraligi ? ' (' + tarihAraligi + ')' : ''}</h2>
-    <div class="table-scroll">
+    <div class="mobile-cards">${yerBloklari}</div>
+    <div class="desktop-table">
     <table class="data">
       <tr><th>NÖBET YERİ</th>${GUNLER.map(g=>`<th>${g}</th>`).join('')}</tr>
       ${rows}
