@@ -585,6 +585,36 @@ function asistanAktifAy(grup){
   return sonDonem.aylar[varsayilanAyIdx(sonDonem.aylar)];
 }
 
+const ASISTAN_AY_ADLARI = ['OCAK','ŞUBAT','MART','NİSAN','MAYIS','HAZİRAN','TEMMUZ','AĞUSTOS','EYLÜL','EKİM','KASIM','ARALIK'];
+
+// Soruda bir ay adı (ör. "KASIM") geçiyorsa, o grubun SON kaydedilen
+// döneminde adı o ayla başlayan ayı bulur (ör. "KASIM 2026 PROGRAMI").
+// Ay adı geçmiyorsa null döner (çağıran taraf o zaman "aktif ay"ı kullanır).
+function asistanAySorudanBul(grup, soru){
+  const bulunanAdlar = ASISTAN_AY_ADLARI.filter(ad=>soru.includes(ad));
+  if(!bulunanAdlar.length) return null;
+  const ayAdi = bulunanAdlar.sort((a,b)=>b.length-a.length)[0];
+  const donemler = (veri.dagitimlar && veri.dagitimlar[grup]) || [];
+  const sonDonem = donemler.length ? donemler[donemler.length-1] : null;
+  if(!sonDonem) return null;
+  return (sonDonem.aylar||[]).find(ay=>asistanNormalize(ay.ayEtiket||'').startsWith(ayAdi)) || 'YOK';
+}
+
+// Bir soru için hangi ayın kullanılacağını belirler: önce soruda geçen
+// ay adına bakar, yoksa "aktif/güncel ay"a düşer. Soruda ay adı geçip de
+// o dönemde öyle bir ay bulunamazsa 'YOK' işaretini yukarı taşır.
+function asistanIlgiliAy(grup, soru){
+  const soruAyi = asistanAySorudanBul(grup, soru);
+  if(soruAyi === 'YOK') return null;
+  if(soruAyi) return soruAyi;
+  return asistanAktifAy(grup);
+}
+
+// Soruda bir gün adı (PAZARTESİ, SALI, ...) geçiyorsa onu döner.
+function asistanGunSorudanBul(soru){
+  return GUNLER.find(g=>soru.includes(g)) || null;
+}
+
 function asistanGrupBelirle(soru){
   if(soru.includes('ÖĞLEN') || soru.includes('ÖĞLE')) return 'oglen';
   if(soru.includes('SABAH')) return 'sabah';
@@ -611,19 +641,23 @@ function asistanOgretmenBul(soru){
   return adaylar[0];
 }
 
-function asistanOgretmenProgramCevap(kisi){
-  const ay = asistanAktifAy(kisi.grup);
+function asistanOgretmenProgramCevap(kisi, soru){
+  const ay = asistanIlgiliAy(kisi.grup, soru || '');
+  if(ay === null && asistanAySorudanBul(kisi.grup, soru||'') === 'YOK'){
+    return 'Sorduğunuz aya ait yayınlanmış bir dönem bulamadım.';
+  }
   if(!ay) return kisi.ad + ' için yayınlanmış bir program bulamadım.';
+  const gunFiltre = asistanGunSorudanBul(soru || '');
   const bulunanlar = [];
   (veri.yerler||[]).forEach(y=>{
-    GUNLER.forEach(g=>{
+    (gunFiltre ? [gunFiltre] : GUNLER).forEach(g=>{
       const ids = (ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][g]) || [];
       if(ids.includes(kisi.id)) bulunanlar.push(g + ' — ' + y.ad);
     });
   });
   const ayAdi = (ay.ayEtiket||'').replace(/\s*\d{4}$/, '');
   if(!bulunanlar.length){
-    return kisi.ad + ', ' + ayAdi + ' döneminde nöbet listesinde görünmüyor (izinli/muaf olabilir).';
+    return kisi.ad + ', ' + ayAdi + (gunFiltre ? ' ' + gunFiltre : '') + ' için nöbet listesinde görünmüyor (izinli/muaf olabilir).';
   }
   return kisi.ad + ' (' + GRUP_ETIKET[kisi.grup] + ') — ' + ayAdi + ' PROGRAMI:\n' + bulunanlar.map(b=>'• ' + b).join('\n');
 }
@@ -651,10 +685,14 @@ function asistanGunSorgusuCevap(soru, ofset){
 
 function asistanYerProgramCevap(yer, soru){
   const grup = asistanGrupBelirle(soru) || aktifGrup;
-  const ay = asistanAktifAy(grup);
+  const ay = asistanIlgiliAy(grup, soru);
+  if(ay === null && asistanAySorudanBul(grup, soru) === 'YOK'){
+    return 'Sorduğunuz aya ait yayınlanmış bir dönem bulamadım.';
+  }
   if(!ay) return yer.ad + ' için yayınlanmış bir program bulamadım.';
   const ayAdi = (ay.ayEtiket||'').replace(/\s*\d{4}$/, '');
-  const satirlar = GUNLER.map(g=>{
+  const gunFiltre = asistanGunSorudanBul(soru);
+  const satirlar = (gunFiltre ? [gunFiltre] : GUNLER).map(g=>{
     const ids = (ay.tablo && ay.tablo[yer.id] && ay.tablo[yer.id][g]) || [];
     const adlar = ids.map(id=>ogretmenAd(grup, id)).filter(Boolean);
     return '• ' + g + ': ' + (adlar.length ? adlar.join(', ') : '—');
@@ -707,7 +745,7 @@ function asistanCevapUret(soruRaw){
   // Öğretmen adı geçiyor mu?
   const kisi = asistanOgretmenBul(soru);
   if(kisi){
-    return asistanOgretmenProgramCevap(kisi);
+    return asistanOgretmenProgramCevap(kisi, soru);
   }
 
   // Bugün / yarın
