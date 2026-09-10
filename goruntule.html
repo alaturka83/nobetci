@@ -86,6 +86,13 @@ function renderHucre(ids, grup){
   return names.length ? names.map(n=>`<div>${n}</div>`).join('') : '<span class="empty">&mdash;</span>';
 }
 
+function formatDateTR(dateStr){
+  if(!dateStr) return '';
+  const p = dateStr.split('-');
+  if(p.length !== 3) return dateStr;
+  return p[2] + '.' + p[1] + '.' + p[0];
+}
+
 function renderAyTablosu(ay, grup, siraNo){
   const yerler = veri.yerler || [];
   const rows = yerler.map(y=>{
@@ -96,11 +103,13 @@ function renderAyTablosu(ay, grup, siraNo){
     return `<tr><td class="yer">${esc(y.ad)}</td>${cells}</tr>`;
   }).join('');
 
-  const tarihEtiketi = ay.ayEtiket || '';
+  const tarihAraligi = (ay.baslangicTarihi && ay.bitisTarihi)
+    ? (formatDateTR(ay.baslangicTarihi) + ' – ' + formatDateTR(ay.bitisTarihi))
+    : '';
 
   return `
   <div class="card">
-    <h2>${siraNo ? siraNo + '. ' : ''}${esc(tarihEtiketi)}</h2>
+    <h2>${esc(ay.ayEtiket || '')} PROGRAMI${tarihAraligi ? ' (' + tarihAraligi + ')' : ''}</h2>
     <div class="table-scroll">
     <table class="data">
       <tr><th>NÖBET YERİ</th>${GUNLER.map(g=>`<th>${g}</th>`).join('')}</tr>
