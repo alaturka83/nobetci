@@ -836,6 +836,9 @@ function asistanSesliOku(metin){
   }catch(e){ /* sesli okuma desteklenmiyorsa sessizce geç */ }
 }
 
+const ASISTAN_KARSILAMA_METNI = 'Merhaba! Nöbet ile ilgili sorularınızı Şakir\'e sorabilirsiniz.';
+let asistanSesOkunduMu = false;
+
 function asistanAc(otomatikMi){
   asistanAcikMi = true;
   const panel = document.getElementById('asistanPanel');
@@ -845,10 +848,8 @@ function asistanAc(otomatikMi){
   const body = document.getElementById('asistanBody');
   if(body && !body.dataset.baslatildi){
     body.dataset.baslatildi = '1';
-    const karsilamaMetni = 'Merhaba! Nöbet ile ilgili sorularınızı Şakir\'e sorabilirsiniz.';
-    asistanMesajEkle('bot', '🕵️ ' + karsilamaMetni);
+    asistanMesajEkle('bot', '🕵️ ' + ASISTAN_KARSILAMA_METNI);
     asistanChipleriEkle();
-    asistanSesliOku(karsilamaMetni);
   }
   if(!otomatikMi){
     const input = document.getElementById('asistanInput');
@@ -872,6 +873,22 @@ document.getElementById('asistanGonder').onclick = ()=> asistanSoruGonder(docume
 document.getElementById('asistanInput').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter') asistanSoruGonder(document.getElementById('asistanInput').value);
 });
+
+// TARAYICI KISITI: Masaüstünde panel sayfa açılır açılmaz kendiliğinden
+// (kullanıcı tıklamadan) açıldığı için, çoğu tarayıcı o anda sesli
+// okumayı engeller — sesli okuma gerçek bir kullanıcı etkileşimi (tıklama/
+// dokunma) gerektirir. Bu yüzden karşılama sesi, sayfadaki İLK gerçek
+// tıklamada (hangi öğeye olursa olsun — baloncuk dahil) bir kere çalınır.
+function asistanIlkEtkilesimdeSesOku(){
+  if(asistanSesOkunduMu) return;
+  const body = document.getElementById('asistanBody');
+  if(!body || !body.dataset.baslatildi) return; // karşılama mesajı henüz gösterilmediyse bekle
+  asistanSesOkunduMu = true;
+  asistanSesliOku(ASISTAN_KARSILAMA_METNI);
+}
+document.addEventListener('click', asistanIlkEtkilesimdeSesOku);
+document.addEventListener('touchstart', asistanIlkEtkilesimdeSesOku);
+
 
 yukle();
 </script>
