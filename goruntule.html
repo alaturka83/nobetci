@@ -87,6 +87,8 @@ table.data td.yer{background:var(--navy-soft);font-weight:700;color:var(--navy);
 .stat-pill-group-title{font-size:9.5px;font-weight:800;color:var(--muted);letter-spacing:.3px;margin-bottom:4px;}
 .stat-pill{display:inline-block;background:var(--navy-soft);color:var(--navy);font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;margin:0 4px 4px 0;}
 .stat-legend{font-size:10.5px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
+.stat-search{border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-size:15px;font-family:inherit;color:var(--text);background:#fff;width:100%;margin-bottom:8px;}
+@media (min-width: 640px){ .stat-search{font-size:13px;max-width:320px;} }
 table.data td.stat-num-cell{font-weight:800;color:var(--navy);}
 table.data td.stat-num-cell.stat-high{color:#B3261E;}
 table.data td.stat-num-cell.stat-low{color:#8A5D14;}
@@ -139,6 +141,7 @@ let aktifAyIdx = 0;
 let filtreYer = '';
 let filtreOgretmen = '';
 let gorunum = 'program'; // 'program' | 'istatistik'
+let istatistikArama = '';
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c])); }
 
@@ -286,7 +289,7 @@ function renderIstatistikIcerik(grup){
     const eslesti = filtreOgretmen && s.id === filtreOgretmen;
     const dayPills = GUNLER.map(g=>`<span class="stat-pill">${g.slice(0,3)}: ${s.days[g]||0}</span>`).join('');
     const placePills = yerler.map(y=>`<span class="stat-pill">${esc(y.ad)}: ${s.places[y.id]||0}</span>`).join('');
-    return `<div class="stat-row ${eslesti?'expanded':''}">
+    return `<div class="stat-row ${eslesti?'expanded':''}" data-ad="${esc(s.ad.toLocaleLowerCase('tr'))}">
       <div class="stat-row-head">
         <div style="flex:1;">
           <div class="stat-ad">${esc(s.ad)}</div>
@@ -316,7 +319,7 @@ function renderIstatistikIcerik(grup){
     const barPct = maxTotal>0 ? Math.round((s.total/maxTotal)*100) : 0;
     const dayPills = GUNLER.map(g=>`<span class="stat-pill">${g.slice(0,3)}: ${s.days[g]||0}</span>`).join('');
     const placePills = yerler.map(y=>`<span class="stat-pill">${esc(y.ad)}: ${s.places[y.id]||0}</span>`).join('');
-    return `<tr>
+    return `<tr data-ad="${esc(s.ad.toLocaleLowerCase('tr'))}">
       <td style="text-align:left;font-weight:700;">${esc(s.ad)}</td>
       <td class="stat-num-cell ${cls}">
         ${s.total}
@@ -329,8 +332,10 @@ function renderIstatistikIcerik(grup){
 
   return `
     <div class="donem-baslik">NÖBET DAĞITIM İSTATİSTİKLERİ</div>
+    <input type="text" id="statAramaInput" class="stat-search" placeholder="ÖĞRETMEN ARA…" value="${esc(istatistikArama)}">
     <div class="stat-legend mobile-cards">İSİMLERİN ÜZERİNE DOKUNARAK GÜN VE YER DAĞILIMINI GÖREBİLİRSİNİZ.</div>
     <div class="stat-legend desktop-table">${donemSayisi} DÖNEM ÜZERİNDEN TOPLAM NÖBET SAYILARI.</div>
+    <div id="statSonucYok" class="msg" style="display:none;padding:16px;">EŞLEŞEN ÖĞRETMEN BULUNAMADI.</div>
     <div class="mobile-cards">${rowsMobile}</div>
     <div class="desktop-table">
     <table class="data">
@@ -378,10 +383,24 @@ function render(){
 
   if(gorunum==='istatistik'){
     app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + viewTabsHtml + renderIstatistikIcerik(aktifGrup);
-    document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ aktifGrup=b.dataset.grup; filtreYer=''; filtreOgretmen=''; render(); });
+    document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ aktifGrup=b.dataset.grup; filtreYer=''; filtreOgretmen=''; istatistikArama=''; render(); });
     document.querySelectorAll('.view-tabs button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
     const bY = document.getElementById('btnYenile'); if(bY) bY.onclick = yukle;
     document.querySelectorAll('.stat-row-head').forEach(t=>t.onclick=()=>{ t.parentElement.classList.toggle('expanded'); });
+    const statArama = document.getElementById('statAramaInput');
+    if(statArama) statArama.oninput = ()=>{
+      istatistikArama = statArama.value;
+      const q = istatistikArama.toLocaleLowerCase('tr').trim();
+      let eslesenSayi = 0;
+      document.querySelectorAll('.stat-row, table.data tr[data-ad]').forEach(el=>{
+        const ad = el.dataset.ad || '';
+        const uyar = !q || ad.includes(q);
+        el.style.display = uyar ? '' : 'none';
+        if(uyar) eslesenSayi++;
+      });
+      const sonucYok = document.getElementById('statSonucYok');
+      if(sonucYok) sonucYok.style.display = (q && eslesenSayi===0) ? '' : 'none';
+    };
     return;
   }
 
