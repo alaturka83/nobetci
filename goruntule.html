@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nöbet Çizelgesi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{
+  --navy:#1B2A4A; --navy-soft:#EAF0F9; --gold:#C9A227; --gold-soft:#FBF1D8;
+  --line:#E3E7EE; --muted:#6B7280; --text:#1F2430; --bg:#F5F6F9; --card:#FFFFFF;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px 60px;}
+.header{background:var(--navy);color:#fff;border-radius:14px;padding:22px 24px;display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+.header img{width:52px;height:52px;object-fit:contain;border-radius:10px;background:#fff;}
+.header .h-title{font-size:19px;font-weight:800;letter-spacing:.3px;}
+.header .h-sub{font-size:13px;opacity:.85;margin-top:2px;}
+.updated{font-size:12px;color:var(--muted);margin-bottom:16px;}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.tabs button{border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:13px;padding:10px 16px;border-radius:10px;cursor:pointer;}
+.tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.donem-list{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.donem-list button{border:1.5px solid var(--gold);background:var(--gold-soft);color:#8A5D14;font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:20px;cursor:pointer;}
+.donem-list button.active{background:var(--gold);color:#fff;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,25,40,.04);}
+.card h2{font-size:15px;margin:0 0 12px;color:var(--navy);}
+.table-scroll{overflow-x:auto;}
+table.data{width:100%;border-collapse:collapse;font-size:13px;}
+table.data th, table.data td{border:1px solid var(--line);padding:9px 10px;text-align:center;vertical-align:middle;}
+table.data th{background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:12px;}
+table.data td.yer{background:var(--navy-soft);font-weight:700;color:var(--navy);text-align:left;}
+.empty{color:#B7BDC9;}
+.msg{padding:40px 20px;text-align:center;color:var(--muted);font-size:14px;}
+.refresh{border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:10px;cursor:pointer;float:right;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="app"><div class="msg">YÜKLENİYOR…</div></div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBUOA8oDCVkZtKmqgynjsYBHlIZEM2cCTs",
+  authDomain: "nobet-programi-d0ada.firebaseapp.com",
+  projectId: "nobet-programi-d0ada",
+  storageBucket: "nobet-programi-d0ada.firebasestorage.app",
+  messagingSenderId: "799459966173",
+  appId: "1:799459966173:web:05528e0fe25f184cc02f34",
+  measurementId: "G-EX3WRN0KF3"
+};
+firebase.initializeApp(firebaseConfig);
+const fbDb = firebase.database();
+
+const GUNLER = ['PAZARTESİ','SALI','ÇARŞAMBA','PERŞEMBE','CUMA'];
+const GRUP_ETIKET = {sabah:'SABAHÇI GRUBU', oglen:'ÖĞLENCİ GRUBU'};
+
+let veri = null;
+let aktifGrup = 'sabah';
+let aktifDonemIdx = 0;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c])); }
+
+function formatTarih(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  return d.toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+
+function ogretmenAd(grup, id){
+  const list = (veri.ogretmenler && veri.ogretmenler[grup]) || [];
+  const o = list.find(x=>x.id===id);
+  return o ? esc(o.ad) : '';
+}
+
+function renderHucre(ids, grup){
+  const names = (ids||[]).map(id=>ogretmenAd(grup, id)).filter(Boolean);
+  return names.length ? names.map(n=>`<div>${n}</div>`).join('') : '<span class="empty">&mdash;</span>';
+}
+
+function renderAyTablosu(ay, grup, siraNo){
+  const yerler = veri.yerler || [];
+  const rows = yerler.map(y=>{
+    const cells = GUNLER.map(g=>{
+      const ids = ay.tablo && ay.tablo[y.id] ? ay.tablo[y.id][g] : [];
+      return `<td>${renderHucre(ids, grup)}</td>`;
+    }).join('');
+    return `<tr><td class="yer">${esc(y.ad)}</td>${cells}</tr>`;
+  }).join('');
+
+  const tarihEtiketi = ay.ayEtiket || '';
+
+  return `
+  <div class="card">
+    <h2>${siraNo ? siraNo + '. ' : ''}${esc(tarihEtiketi)}</h2>
+    <div class="table-scroll">
+    <table class="data">
+      <tr><th>NÖBET YERİ</th>${GUNLER.map(g=>`<th>${g}</th>`).join('')}</tr>
+      ${rows}
+    </table>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(!veri || !veri.dagitimlar){
+    app.innerHTML = '<div class="msg">HENÜZ YAYINLANMIŞ BİR NÖBET ÇİZELGESİ YOK.</div>';
+    return;
+  }
+
+  const kurum = veri.kurum || {};
+  const donemler = (veri.dagitimlar[aktifGrup] || []);
+  if(aktifDonemIdx >= donemler.length) aktifDonemIdx = donemler.length ? donemler.length - 1 : 0;
+
+  const headerHtml = `
+    <div class="header">
+      ${kurum.logo ? `<img src="${kurum.logo}" alt="Logo">` : ''}
+      <div>
+        <div class="h-title">${esc(kurum.ad || 'NÖBET ÇİZELGESİ')}</div>
+        <div class="h-sub">${esc(kurum.altBaslik || '')}</div>
+      </div>
+    </div>`;
+
+  const guncellemeHtml = `<div class="updated">SON YAYIN: ${formatTarih(veri.yayinTarihi)} <button class="refresh" id="btnYenile">YENİLE</button></div>`;
+
+  const tabsHtml = `
+    <div class="tabs">
+      <button data-grup="sabah" class="${aktifGrup==='sabah'?'active':''}">${GRUP_ETIKET.sabah}</button>
+      <button data-grup="oglen" class="${aktifGrup==='oglen'?'active':''}">${GRUP_ETIKET.oglen}</button>
+    </div>`;
+
+  let bodyHtml = '';
+  if(!donemler.length){
+    bodyHtml = '<div class="msg">BU GRUP İÇİN HENÜZ YAYINLANMIŞ BİR DÖNEM YOK.</div>';
+  } else {
+    const donemListHtml = `
+      <div class="donem-list">
+        ${donemler.map((b,i)=>`<button data-idx="${i}" class="${i===aktifDonemIdx?'active':''}">${esc((b.aylar||[]).map(a=>a.ayEtiket).join(', '))}</button>`).join('')}
+      </div>`;
+    const secili = donemler[aktifDonemIdx];
+    const aylarHtml = (secili.aylar || []).map((ay, idx)=>renderAyTablosu(ay, aktifGrup, idx+1)).join('');
+    bodyHtml = donemListHtml + aylarHtml;
+  }
+
+  app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + bodyHtml;
+
+  document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+    aktifGrup = b.dataset.grup;
+    aktifDonemIdx = 0;
+    render();
+  });
+  document.querySelectorAll('.donem-list button').forEach(b=>b.onclick=()=>{
+    aktifDonemIdx = Number(b.dataset.idx);
+    render();
+  });
+  const btnYenile = document.getElementById('btnYenile');
+  if(btnYenile) btnYenile.onclick = yukle;
+}
+
+function yukle(){
+  document.getElementById('app').innerHTML = '<div class="msg">YÜKLENİYOR…</div>';
+  fbDb.ref('nobetListesi').once('value')
+    .then(snap=>{
+      veri = snap.val();
+      render();
+    })
+    .catch(err=>{
+      document.getElementById('app').innerHTML = '<div class="msg">VERİ YÜKLENEMEDİ: ' + esc(err.message) + '</div>';
+    });
+}
+
+yukle();
+</script>
+</body>
+</html>
