@@ -647,12 +647,41 @@ function asistanOgretmenBul(soru){
 }
 
 function asistanOgretmenProgramCevap(kisi, soru){
-  const ay = asistanIlgiliAy(kisi.grup, soru || '');
-  if(ay === null && asistanAySorudanBul(kisi.grup, soru||'') === 'YOK'){
+  soru = soru || '';
+
+  // "BÜTÜN / TÜM NÖBETLERİNİ" gibi ifadeler geçiyorsa, tek bir aya değil,
+  // yayınlanmış SON DÖNEMİN tüm aylarına bakılır.
+  const tumDonemIstendi = (soru.includes('BÜTÜN') || soru.includes('TÜM')) && !asistanAySorudanBul(kisi.grup, soru);
+  if(tumDonemIstendi){
+    const donemler = (veri.dagitimlar && veri.dagitimlar[kisi.grup]) || [];
+    const sonDonem = donemler.length ? donemler[donemler.length-1] : null;
+    if(!sonDonem || !sonDonem.aylar || !sonDonem.aylar.length){
+      return kisi.ad + ' için yayınlanmış bir program bulamadım.';
+    }
+    const satirlar = [];
+    sonDonem.aylar.forEach(ay=>{
+      const ayAdi = (ay.ayEtiket||'').replace(/\s*\d{4}$/, '');
+      const buAy = [];
+      (veri.yerler||[]).forEach(y=>{
+        GUNLER.forEach(g=>{
+          const ids = (ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][g]) || [];
+          if(ids.includes(kisi.id)) buAy.push(g + ' — ' + y.ad);
+        });
+      });
+      if(buAy.length) satirlar.push(ayAdi + ':\n' + buAy.map(b=>'  • ' + b).join('\n'));
+    });
+    if(!satirlar.length){
+      return kisi.ad + ', yayınlanmış hiçbir dönemde nöbet listesinde görünmüyor.';
+    }
+    return kisi.ad + ' (' + GRUP_ETIKET[kisi.grup] + ') — TÜM DÖNEM NÖBETLERİ:\n\n' + satirlar.join('\n\n');
+  }
+
+  const ay = asistanIlgiliAy(kisi.grup, soru);
+  if(ay === null && asistanAySorudanBul(kisi.grup, soru) === 'YOK'){
     return 'Sorduğunuz aya ait yayınlanmış bir dönem bulamadım.';
   }
   if(!ay) return kisi.ad + ' için yayınlanmış bir program bulamadım.';
-  const gunFiltre = asistanGunSorudanBul(soru || '');
+  const gunFiltre = asistanGunSorudanBul(soru);
   const bulunanlar = [];
   (veri.yerler||[]).forEach(y=>{
     (gunFiltre ? [gunFiltre] : GUNLER).forEach(g=>{
@@ -824,7 +853,22 @@ function asistanSoruGonder(soru){
 
 // Web Speech API ile Türkçe sesli okuma — tarayıcı desteklemiyorsa
 // (veya engelliyorsa) sessizce hiçbir şey yapmaz, hata vermez.
-function asistanSesliOku(metin){
+// Masaüstü ve mobil tarayıcılar farklı ses listeleri sunabiliyor; bu
+// yüzden mevcut Türkçe sesler arasından (tercihen bir Google/kadın
+// sesi) HEP AYNI kriterle seçim yapılıyor ki iki platformda da mümkün
+// olduğunca benzer bir ses çıksın.
+function asistanTurkceSesSec(){
+  if(!('speechSynthesis' in window)) return null;
+  const sesler = window.speechSynthesis.getVoices() || [];
+  const trSesler = sesler.filter(s=>(s.lang||'').toLowerCase().startsWith('tr'));
+  if(!trSesler.length) return null;
+  // Öncelik sırası: Google Türkçe > adında "female/kadın" geçen > ilk Türkçe ses.
+  return trSesler.find(s=>/google/i.test(s.name))
+    || trSesler.find(s=>/female|kadın/i.test(s.name))
+    || trSesler[0];
+}
+
+function asistanSesliOkuGercek(metin){
   try{
     if(!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
@@ -832,8 +876,33 @@ function asistanSesliOku(metin){
     u.lang = 'tr-TR';
     u.rate = 1;
     u.pitch = 1;
+    const ses = asistanTurkceSesSec();
+    if(ses) u.voice = ses;
     window.speechSynthesis.speak(u);
   }catch(e){ /* sesli okuma desteklenmiyorsa sessizce geç */ }
+}
+
+function asistanSesliOku(metin){
+  if(!('speechSynthesis' in window)) return;
+  let okundu = false;
+  const okuVeIsaretle = ()=>{ if(okundu) return; okundu = true; asistanSesliOkuGercek(metin); };
+  const mevcutSesler = window.speechSynthesis.getVoices();
+  if(mevcutSesler && mevcutSesler.length){
+    okuVeIsaretle();
+  } else {
+    const dinleyici = ()=>{
+      window.speechSynthesis.removeEventListener('voiceschanged', dinleyici);
+      okuVeIsaretle();
+    };
+    window.speechSynthesis.addEventListener('voiceschanged', dinleyici);
+    // Bazı tarayıcılarda 'voiceschanged' hiç tetiklenmeyebilir; güvenlik
+    // amacıyla kısa bir süre sonra yine de dener (yukarıdaki bayrak
+    // sayesinde iki kez okuma olmaz).
+    setTimeout(()=>{
+      window.speechSynthesis.removeEventListener('voiceschanged', dinleyici);
+      okuVeIsaretle();
+    }, 300);
+  }
 }
 
 const ASISTAN_KARSILAMA_METNI = 'Merhaba! Nöbet ile ilgili sorularınızı Şakir\'e sorabilirsiniz.';
