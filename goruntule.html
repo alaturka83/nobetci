@@ -700,12 +700,13 @@ function asistanGunSorgusuCevap(soru, ofset){
   const grup = asistanGrupBelirle(soru) || aktifGrup;
   const tarih = asistanBugun(ofset);
   const gun = asistanGunAdi(tarih);
+  const etiket = ofset < 0 ? 'DÜN' : (ofset > 0 ? 'YARIN' : 'BUGÜN');
   if(gun === 'CUMARTESİ' || gun === 'PAZAR'){
-    return (ofset ? 'Yarın' : 'Bugün') + ' hafta sonu, nöbet yazılmıyor.';
+    return etiket.charAt(0) + etiket.slice(1).toLocaleLowerCase('tr') + ' hafta sonu, nöbet yazılmıyor.';
   }
   const ay = asistanTarihinAyi(grup, tarih);
   if(!ay){
-    return (ofset ? 'Yarın' : 'Bugün') + ' için yayınlanmış bir program bulamadım (dönem dışında olabilir).';
+    return etiket.charAt(0) + etiket.slice(1).toLocaleLowerCase('tr') + ' için yayınlanmış bir program bulamadım (dönem dışında olabilir).';
   }
   const yer = asistanYerBul(soru);
   const yerler = yer ? [yer] : (veri.yerler||[]);
@@ -714,7 +715,7 @@ function asistanGunSorgusuCevap(soru, ofset){
     const adlar = ids.map(id=>ogretmenAd(grup, id)).filter(Boolean);
     return '• ' + y.ad + ': ' + (adlar.length ? adlar.join(', ') : '—');
   });
-  return (ofset ? 'YARIN' : 'BUGÜN') + ' (' + gun + ', ' + GRUP_ETIKET[grup] + '):\n' + satirlar.join('\n');
+  return etiket + ' (' + gun + ', ' + GRUP_ETIKET[grup] + '):\n' + satirlar.join('\n');
 }
 
 function asistanYerProgramCevap(yer, soru){
@@ -734,6 +735,68 @@ function asistanYerProgramCevap(yer, soru){
   return yer.ad + ' (' + GRUP_ETIKET[grup] + ') — ' + ayAdi + ':\n' + satirlar.join('\n');
 }
 
+// "Bu hafta kim nöbetçi?" — belirli bir yer verilmemişse TÜM yerlerin,
+// o haftaki (=ilgili ayın haftalık deseni) programını listeler.
+function asistanHaftaCevap(soru){
+  const grup = asistanGrupBelirle(soru) || aktifGrup;
+  const ay = asistanIlgiliAy(grup, soru);
+  if(ay === null && asistanAySorudanBul(grup, soru) === 'YOK'){
+    return 'Sorduğunuz aya ait yayınlanmış bir dönem bulamadım.';
+  }
+  if(!ay) return 'Bu hafta için yayınlanmış bir program bulamadım.';
+  const ayAdi = (ay.ayEtiket||'').replace(/\s*\d{4}$/, '');
+  const yer = asistanYerBul(soru);
+  const yerler = yer ? [yer] : (veri.yerler||[]);
+  const satirlar = yerler.map(y=>{
+    const gunler = GUNLER.map(g=>{
+      const ids = (ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][g]) || [];
+      const adlar = ids.map(id=>ogretmenAd(grup, id)).filter(Boolean);
+      return g.slice(0,3) + ': ' + (adlar.length ? adlar.join(', ') : '—');
+    }).join(' | ');
+    return '• ' + y.ad + '\n   ' + gunler;
+  });
+  return 'BU HAFTA (' + ayAdi + ' PROGRAMI, ' + GRUP_ETIKET[grup] + '):\n' + satirlar.join('\n');
+}
+
+// "15 Ekim'de kim nöbetçi?" gibi belirli bir takvim tarihini soran
+// sorularda, sorudaki gün numarası + ay adını bulup gerçek tarihe çevirir.
+function asistanBelirliTarihCevap(soru){
+  const m = soru.match(new RegExp('(\\d{1,2})\\.?\\s*(' + ASISTAN_AY_ADLARI.join('|') + ')')) ||
+            soru.match(new RegExp('(' + ASISTAN_AY_ADLARI.join('|') + ')\\s*(\\d{1,2})'));
+  if(!m) return null;
+  const gunNo = parseInt(m[1].match(/^\d+$/) ? m[1] : m[2], 10);
+  const ayAdi = m[1].match(/^\d+$/) ? m[2] : m[1];
+  if(!gunNo || gunNo < 1 || gunNo > 31) return null;
+
+  const grup = asistanGrupBelirle(soru) || aktifGrup;
+  const donemler = (veri.dagitimlar && veri.dagitimlar[grup]) || [];
+  const sonDonem = donemler.length ? donemler[donemler.length-1] : null;
+  if(!sonDonem) return 'Yayınlanmış bir program bulamadım.';
+  const ay = (sonDonem.aylar||[]).find(a=>asistanNormalize(a.ayEtiket||'').startsWith(ayAdi));
+  if(!ay) return 'Sorduğunuz aya ait yayınlanmış bir dönem bulamadım.';
+
+  const yil = (ay.baslangicTarihi||'').slice(0,4);
+  const ayNo = (ay.baslangicTarihi||'').slice(5,7);
+  const iso = yil + '-' + ayNo + '-' + String(gunNo).padStart(2,'0');
+  const tarih = new Date(iso + 'T00:00:00');
+  if(isNaN(tarih)) return null;
+  if(iso < ay.baslangicTarihi || iso > ay.bitisTarihi){
+    return formatDateTR(iso) + ' tarihi, ' + (ay.ayEtiket||'').replace(/\s*\d{4}$/, '') + ' döneminin dışında kalıyor.';
+  }
+  const gun = asistanGunAdi(tarih);
+  if(gun === 'CUMARTESİ' || gun === 'PAZAR'){
+    return formatDateTR(iso) + ' (' + gun + ') hafta sonu, nöbet yazılmıyor.';
+  }
+  const yer = asistanYerBul(soru);
+  const yerler = yer ? [yer] : (veri.yerler||[]);
+  const satirlar = yerler.map(y=>{
+    const ids = (ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][gun]) || [];
+    const adlar = ids.map(id=>ogretmenAd(grup, id)).filter(Boolean);
+    return '• ' + y.ad + ': ' + (adlar.length ? adlar.join(', ') : '—');
+  });
+  return formatDateTR(iso) + ' (' + gun + ', ' + GRUP_ETIKET[grup] + '):\n' + satirlar.join('\n');
+}
+
 function asistanIstatistikCevap(soru){
   const grup = asistanGrupBelirle(soru) || aktifGrup;
   const {list, donemSayisi} = hesaplaIstatistik(grup);
@@ -744,6 +807,105 @@ function asistanIstatistikCevap(soru){
   return baslik + ' (' + GRUP_ETIKET[grup] + ', ' + donemSayisi + ' dönem):\n' + ilk3.map((s,i)=>(i+1)+'. '+s.ad+' — '+s.total+' nöbet').join('\n');
 }
 
+// "Ayşe kaç kez nöbet tuttu?" — tek bir kişinin toplam sayısı + kırılımı.
+function asistanKacKezCevap(kisi){
+  const {list, donemSayisi} = hesaplaIstatistik(kisi.grup);
+  if(!donemSayisi) return kisi.ad + ' için henüz istatistik oluşturacak yayınlanmış dönem yok.';
+  const s = list.find(x=>x.id===kisi.id);
+  if(!s || !s.total) return kisi.ad + ', yayınlanmış ' + donemSayisi + ' dönem boyunca hiç nöbet listesinde görünmüyor.';
+  const gunler = GUNLER.map(g=>g.slice(0,3)+': '+(s.days[g]||0)).join(', ');
+  const yerler = (veri.yerler||[]).map(y=>y.ad+': '+(s.places[y.id]||0)).filter(x=>!x.endsWith(': 0')).join(', ');
+  return kisi.ad + ', yayınlanmış ' + donemSayisi + ' dönem boyunca toplam ' + s.total + ' kez nöbet tutmuş.\nGün dağılımı: ' + gunler + (yerler ? '\nYer dağılımı: ' + yerler : '');
+}
+
+// "Hangi gün en çok/az nöbet var?" — ilgili ayın haftalık deseninde,
+// günlere göre toplam nöbetçi sayısını karşılaştırır.
+function asistanGunBazliYukCevap(soru){
+  const grup = asistanGrupBelirle(soru) || aktifGrup;
+  const ay = asistanIlgiliAy(grup, soru);
+  if(!ay) return 'Bu grup için yayınlanmış bir program bulamadım.';
+  const sayaclar = GUNLER.map(g=>{
+    let toplam = 0;
+    (veri.yerler||[]).forEach(y=>{ toplam += ((ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][g]) || []).length; });
+    return {gun:g, toplam};
+  });
+  sayaclar.sort((a,b)=> soru.includes('AZ') ? a.toplam-b.toplam : b.toplam-a.toplam);
+  const ayAdi = (ay.ayEtiket||'').replace(/\s*\d{4}$/, '');
+  const baslik = soru.includes('AZ') ? 'EN AZ NÖBETÇİ OLAN GÜN' : 'EN ÇOK NÖBETÇİ OLAN GÜN';
+  return baslik + ' (' + ayAdi + ', ' + GRUP_ETIKET[grup] + '):\n' + sayaclar.map(s=>'• ' + s.gun + ': ' + s.toplam + ' nöbetçi').join('\n');
+}
+
+// "Hangi yerde en çok/az nöbet yazılmış?" — TÜM yayınlanmış dönem boyunca
+// (hesaplaIstatistik'in "places" toplamları üzerinden) yer bazlı toplam.
+function asistanYerBazliYukCevap(soru){
+  const grup = asistanGrupBelirle(soru) || aktifGrup;
+  const {list, donemSayisi} = hesaplaIstatistik(grup);
+  if(!donemSayisi) return 'Bu grup için henüz istatistik oluşturacak yayınlanmış dönem yok.';
+  const toplamlar = (veri.yerler||[]).map(y=>{
+    let toplam = 0;
+    list.forEach(s=>{ toplam += (s.places[y.id]||0); });
+    return {ad:y.ad, toplam};
+  });
+  toplamlar.sort((a,b)=> soru.includes('AZ') ? a.toplam-b.toplam : b.toplam-a.toplam);
+  const baslik = soru.includes('AZ') ? 'EN AZ NÖBET YAZILAN YER' : 'EN ÇOK NÖBET YAZILAN YER';
+  return baslik + ' (' + donemSayisi + ' dönem, ' + GRUP_ETIKET[grup] + '):\n' + toplamlar.map(t=>'• ' + t.ad + ': ' + t.toplam + ' nöbet').join('\n');
+}
+
+// Genel sayısal bilgiler: kaç öğretmen, kaç yer, kaç dönem, dönem ne zaman.
+function asistanGenelBilgiCevap(soru){
+  const grup = asistanGrupBelirle(soru) || aktifGrup;
+  if(soru.includes('ÖĞRETMEN')){
+    const sabah = (veri.ogretmenler && veri.ogretmenler.sabah || []).length;
+    const oglen = (veri.ogretmenler && veri.ogretmenler.oglen || []).length;
+    return 'SABAHÇI GRUBU: ' + sabah + ' öğretmen\nÖĞLENCİ GRUBU: ' + oglen + ' öğretmen';
+  }
+  if(soru.includes('YER')){
+    const yerler = veri.yerler || [];
+    return 'Toplam ' + yerler.length + ' nöbet yeri var: ' + yerler.map(y=>y.ad).join(', ');
+  }
+  if(soru.includes('DÖNEM') || soru.includes('AY ')){
+    const {donemSayisi} = hesaplaIstatistik(grup);
+    const ay0 = asistanAktifAy(grup);
+    const donemler = (veri.dagitimlar && veri.dagitimlar[grup]) || [];
+    const sonDonem = donemler.length ? donemler[donemler.length-1] : null;
+    const aylar = sonDonem ? (sonDonem.aylar||[]) : [];
+    if(!aylar.length) return 'Bu grup için henüz yayınlanmış bir dönem yok.';
+    const ilk = aylar[0], son = aylar[aylar.length-1];
+    return GRUP_ETIKET[grup] + ' için ' + aylar.length + ' aylık bir program yayınlanmış: ' +
+      formatDateTR(ilk.baslangicTarihi) + ' – ' + formatDateTR(son.bitisTarihi) + '.';
+  }
+  return null;
+}
+
+// Sorudaki metinde geçen TÜM öğretmen adlarını (tekrarsız) bulur —
+// karşılaştırma sorularında ("Ayşe mi Fatma mı daha çok nöbet tutmuş")
+// kullanılır.
+function asistanTumOgretmenleriBul(soru){
+  const bulunanlar = [];
+  ['sabah','oglen'].forEach(grup=>{
+    ((veri.ogretmenler && veri.ogretmenler[grup]) || []).forEach(o=>{
+      const ad = asistanNormalize(o.ad);
+      if(soru.includes(ad) && !bulunanlar.some(b=>b.id===o.id)){
+        bulunanlar.push({grup, id:o.id, ad:o.ad, uzunluk:ad.length});
+      }
+    });
+  });
+  return bulunanlar.sort((a,b)=>b.uzunluk-a.uzunluk);
+}
+
+function asistanKarsilastirCevap(kisiler){
+  const sonuc = kisiler.map(k=>{
+    const {list} = hesaplaIstatistik(k.grup);
+    const s = list.find(x=>x.id===k.id);
+    return {ad:k.ad, total: s ? s.total : 0};
+  });
+  sonuc.sort((a,b)=>b.total-a.total);
+  const satirlar = sonuc.map(s=>'• ' + s.ad + ': ' + s.total + ' nöbet').join('\n');
+  const kazanan = sonuc[0];
+  const esitMi = sonuc.every(s=>s.total===sonuc[0].total);
+  return satirlar + (esitMi ? '\n\nİkisi de eşit sayıda nöbet tutmuş.' : '\n\n' + kazanan.ad + ' daha fazla nöbet tutmuş.');
+}
+
 function asistanCevapUret(soruRaw){
   if(!veri || !veri.dagitimlar){
     return 'Henüz yayınlanmış bir nöbet programı bulamadım.';
@@ -751,13 +913,11 @@ function asistanCevapUret(soruRaw){
   const soru = asistanNormalize(soruRaw);
 
   if(soru.includes('MERHABA') || soru.includes('SELAM')){
-    return 'Merhaba! Nöbet programınızla ilgili aşağıdaki gibi sorular sorabilirsiniz:\n• "Bugün kim nöbetçi?"\n• "Ayşe Yılmaz ne zaman nöbetçi?"\n• "En çok nöbet tutan kim?"';
+    return 'Merhaba! Nöbet programınızla ilgili aşağıdaki gibi sorular sorabilirsiniz:\n• "Bugün/yarın/dün kim nöbetçi?"\n• "Ayşe Yılmaz ne zaman nöbetçi?"\n• "Ayşe kaç kez nöbet tuttu?"\n• "En çok nöbet tutan kim?"\n• "15 Ekim\'de kim nöbetçi?"';
   }
-
   if(soru.includes('TEŞEKKÜR')){
     return 'Rica ederim, başka bir sorunuz olursa buradayım. 🙂';
   }
-
   if(soru.includes('FİLTRE')){
     return '"PROGRAM" görünümünde, ay seçiminin altındaki ÖĞRETMEN ve NÖBET YERİ kutularından seçim yaparak listeyi daraltabilirsiniz. "FİLTREYİ TEMİZLE" ile sıfırlayabilirsiniz.';
   }
@@ -770,25 +930,61 @@ function asistanCevapUret(soruRaw){
   if(soru.includes('GÜNCELLE') || soru.includes('YENİLE') || soru.includes('SON YAYIN')){
     return 'Sayfanın üst kısmındaki "YENİLE" butonuna basarak en güncel yayınlanan programı çekebilirsiniz. "SON YAYIN" yazısı, en son ne zaman güncellendiğini gösterir.';
   }
+  if((soru.includes('SABAHÇI') || soru.includes('ÖĞLENCİ')) && (soru.includes('NASIL') || soru.includes('DEĞİŞ') || soru.includes('GEÇ'))){
+    return 'Üstteki "SABAHÇI GRUBU" / "ÖĞLENCİ GRUBU" sekmelerine dokunarak iki grup arasında geçiş yapabilirsiniz.';
+  }
 
-  // En çok / en az nöbet
+  // Genel sayısal bilgiler (kaç öğretmen / kaç yer / kaç dönem / tarih aralığı)
+  if(soru.includes('KAÇ') && (soru.includes('ÖĞRETMEN') || soru.includes('YER') || soru.includes('DÖNEM') || soru.includes('AY VAR'))){
+    const cevap = asistanGenelBilgiCevap(soru);
+    if(cevap) return cevap;
+  }
+  if((soru.includes('NE ZAMAN') || soru.includes('TARİH')) && soru.includes('DÖNEM')){
+    const cevap = asistanGenelBilgiCevap('DÖNEM');
+    if(cevap) return cevap;
+  }
+
+  // Hangi gün en çok/az nöbet var?
+  if(soru.includes('GÜN') && (soru.includes('EN ÇOK') || soru.includes('EN FAZLA') || soru.includes('EN AZ')) && soru.includes('NÖBET')){
+    return asistanGunBazliYukCevap(soru);
+  }
+  // Hangi yerde en çok/az nöbet yazılmış?
+  if(soru.includes('YER') && (soru.includes('EN ÇOK') || soru.includes('EN FAZLA') || soru.includes('EN AZ')) && soru.includes('NÖBET')){
+    return asistanYerBazliYukCevap(soru);
+  }
+  // En çok / en az nöbet tutan KİŞİ
   if((soru.includes('EN ÇOK') || soru.includes('EN FAZLA') || soru.includes('EN AZ')) && soru.includes('NÖBET')){
     return asistanIstatistikCevap(soru);
   }
 
-  // Öğretmen adı geçiyor mu?
+  // İki (veya daha fazla) öğretmen karşılaştırması
+  const cokluKisi = asistanTumOgretmenleriBul(soru);
+  if(cokluKisi.length >= 2 && (soru.includes('ÇOK') || soru.includes('AZ') || soru.includes('KARŞILAŞTIR') || soru.includes(' MI ') || soru.includes(' Mİ '))){
+    return asistanKarsilastirCevap(cokluKisi);
+  }
+
+  // Tek öğretmen adı geçiyor mu?
   const kisi = asistanOgretmenBul(soru);
   if(kisi){
+    if(soru.includes('KAÇ')){
+      return asistanKacKezCevap(kisi);
+    }
     return asistanOgretmenProgramCevap(kisi, soru);
   }
 
-  // Bugün / yarın
-  if(soru.includes('YARIN')){
-    return asistanGunSorgusuCevap(soru, 1);
+  // Dün / bugün / yarın
+  if(soru.includes('DÜN')) return asistanGunSorgusuCevap(soru, -1);
+  if(soru.includes('YARIN')) return asistanGunSorgusuCevap(soru, 1);
+  if(soru.includes('BUGÜN')) return asistanGunSorgusuCevap(soru, 0);
+
+  // Bu hafta
+  if(soru.includes('HAFTA')){
+    return asistanHaftaCevap(soru);
   }
-  if(soru.includes('BUGÜN')){
-    return asistanGunSorgusuCevap(soru, 0);
-  }
+
+  // Belirli bir takvim tarihi (ör. "15 Ekim")
+  const tarihCevabi = asistanBelirliTarihCevap(soru);
+  if(tarihCevabi) return tarihCevabi;
 
   // Yer adı geçiyor mu? (BAHÇE, 1. KAT vb.)
   const yer = asistanYerBul(soru);
@@ -797,14 +993,14 @@ function asistanCevapUret(soruRaw){
   }
 
   if(soru.includes('KİM') || soru.includes('NÖBET')){
-    return 'Tam olarak anlayamadım. Bir öğretmen adı, bir nöbet yeri adı ya da "bugün/yarın kim nöbetçi" gibi sorabilirsiniz. Örnekler için aşağıdaki önerilere göz atabilirsiniz.';
+    return 'Tam olarak anlayamadım. Bir öğretmen adı, bir nöbet yeri adı, bir tarih (ör. "15 Ekim") ya da "bugün/yarın/dün kim nöbetçi" gibi sorabilirsiniz. Örnekler için aşağıdaki önerilere göz atabilirsiniz.';
   }
 
   return 'Bunu tam olarak anlayamadım 🙂 Aşağıdaki örnek sorulardan birini deneyebilir, ya da bir öğretmen adı veya nöbet yeri adı yazabilirsiniz.';
 }
 
 function asistanOneriler(){
-  return ['Bugün kim nöbetçi?','Yarın kim nöbetçi?','En çok nöbet tutan kim?','İstatistikler nasıl çalışır?'];
+  return ['Bugün kim nöbetçi?','Bu hafta kim nöbetçi?','En çok nöbet tutan kim?','Kaç öğretmen var?'];
 }
 
 function asistanMesajEkle(tip, metin){
