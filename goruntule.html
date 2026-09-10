@@ -822,6 +822,20 @@ function asistanSoruGonder(soru){
   }, 250);
 }
 
+// Web Speech API ile Türkçe sesli okuma — tarayıcı desteklemiyorsa
+// (veya engelliyorsa) sessizce hiçbir şey yapmaz, hata vermez.
+function asistanSesliOku(metin){
+  try{
+    if(!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(metin);
+    u.lang = 'tr-TR';
+    u.rate = 1;
+    u.pitch = 1;
+    window.speechSynthesis.speak(u);
+  }catch(e){ /* sesli okuma desteklenmiyorsa sessizce geç */ }
+}
+
 function asistanAc(otomatikMi){
   asistanAcikMi = true;
   const panel = document.getElementById('asistanPanel');
@@ -831,8 +845,10 @@ function asistanAc(otomatikMi){
   const body = document.getElementById('asistanBody');
   if(body && !body.dataset.baslatildi){
     body.dataset.baslatildi = '1';
-    asistanMesajEkle('bot', '🕵️ Merhaba! Nöbet ile ilgili sorularınızı Şakir\'e sorabilirsiniz.');
+    const karsilamaMetni = 'Merhaba! Nöbet ile ilgili sorularınızı Şakir\'e sorabilirsiniz.';
+    asistanMesajEkle('bot', '🕵️ ' + karsilamaMetni);
     asistanChipleriEkle();
+    asistanSesliOku(karsilamaMetni);
   }
   if(!otomatikMi){
     const input = document.getElementById('asistanInput');
@@ -846,6 +862,7 @@ function asistanKapat(){
   const backdrop = document.getElementById('asistanBackdrop');
   if(panel) panel.classList.remove('acik');
   if(backdrop) backdrop.classList.remove('acik');
+  try{ if('speechSynthesis' in window) window.speechSynthesis.cancel(); }catch(e){}
 }
 
 document.getElementById('asistanFab').onclick = ()=> asistanAcikMi ? asistanKapat() : asistanAc(false);
