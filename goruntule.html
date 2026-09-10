@@ -45,8 +45,12 @@ body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:va
 
 .yer-block{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;}
 .yer-block.yer-hidden{display:none;}
-.yer-block-title{background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:12px;padding:7px 10px;}
-.day-row{display:flex;padding:7px 10px;border-top:1px solid var(--line);gap:8px;}
+.yer-block-title{background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:12px;padding:9px 10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;-webkit-user-select:none;user-select:none;}
+.yer-block-title .chevron{transition:transform .15s;font-size:11px;color:var(--navy);}
+.yer-block.expanded .yer-block-title .chevron{transform:rotate(180deg);}
+.yer-block .day-row{display:none;}
+.yer-block.expanded .day-row{display:flex;}
+.day-row{padding:7px 10px;border-top:1px solid var(--line);gap:8px;}
 .day-row .day-label{flex:0 0 74px;font-size:10.5px;font-weight:800;color:var(--muted);padding-top:1px;}
 .day-row .day-names{flex:1;font-size:12.5px;line-height:1.45;}
 .day-row .day-names .isim{display:block;}
@@ -167,12 +171,17 @@ function renderAyIcerik(ay, grup){
 
   const yerBloklari = yerler.map(y=>{
     const gizli = filtreYer && y.id !== filtreYer;
+    const icerirMi = filtreOgretmen && GUNLER.some(g=>{
+      const ids = (ay.tablo && ay.tablo[y.id] ? ay.tablo[y.id][g] : []) || [];
+      return ids.includes(filtreOgretmen);
+    });
+    const acik = !!filtreYer || icerirMi;
     const gunSatirlari = GUNLER.map(g=>{
       const ids = ay.tablo && ay.tablo[y.id] ? ay.tablo[y.id][g] : [];
       return `<div class="day-row"><div class="day-label">${g}</div><div class="day-names">${renderHucre(ids, grup)}</div></div>`;
     }).join('');
-    return `<div class="yer-block ${gizli ? 'yer-hidden' : ''}">
-      <div class="yer-block-title">${esc(y.ad)}</div>
+    return `<div class="yer-block ${gizli ? 'yer-hidden' : ''} ${acik ? 'expanded' : ''}">
+      <div class="yer-block-title" data-toggle="1">${esc(y.ad)}<span class="chevron">▾</span></div>
       ${gunSatirlari}
     </div>`;
   }).join('');
@@ -281,6 +290,10 @@ function render(){
   if(selYer) selYer.onchange = ()=>{ filtreYer = selYer.value; render(); };
   const btnTemizle = document.getElementById('btnFiltreTemizle');
   if(btnTemizle) btnTemizle.onclick = ()=>{ filtreYer=''; filtreOgretmen=''; render(); };
+
+  document.querySelectorAll('.yer-block-title').forEach(t=>t.onclick=()=>{
+    t.parentElement.classList.toggle('expanded');
+  });
 }
 
 function yukle(){
