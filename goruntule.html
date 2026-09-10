@@ -648,10 +648,26 @@ function asistanOgretmenBul(soru){
 
 function asistanOgretmenProgramCevap(kisi, soru){
   soru = soru || '';
+  const yerFiltre = asistanYerBul(soru);
+  const gunFiltre = asistanGunSorudanBul(soru);
 
-  // "BÜTÜN / TÜM NÖBETLERİNİ" gibi ifadeler geçiyorsa, tek bir aya değil,
-  // yayınlanmış SON DÖNEMİN tüm aylarına bakılır.
-  const tumDonemIstendi = (soru.includes('BÜTÜN') || soru.includes('TÜM')) && !asistanAySorudanBul(kisi.grup, soru);
+  function ayBulunanlari(ay){
+    const sonuc = [];
+    (veri.yerler||[]).forEach(y=>{
+      if(yerFiltre && y.id !== yerFiltre.id) return;
+      (gunFiltre ? [gunFiltre] : GUNLER).forEach(g=>{
+        const ids = (ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][g]) || [];
+        if(ids.includes(kisi.id)) sonuc.push(g + ' — ' + y.ad);
+      });
+    });
+    return sonuc;
+  }
+
+  // "BÜTÜN / TÜM / HANGİ AY(LAR)DA" gibi ifadeler geçiyorsa, tek bir aya
+  // değil, yayınlanmış SON DÖNEMİN tüm aylarına bakılır. Bir yer ve/veya
+  // gün de belirtilmişse (ör. "1. Kat'ta hangi aylarda"), sadece o
+  // yer/gün için filtrelenmiş sonuç gösterilir.
+  const tumDonemIstendi = (soru.includes('BÜTÜN') || soru.includes('TÜM') || soru.includes('HANGİ AY')) && !asistanAySorudanBul(kisi.grup, soru);
   if(tumDonemIstendi){
     const donemler = (veri.dagitimlar && veri.dagitimlar[kisi.grup]) || [];
     const sonDonem = donemler.length ? donemler[donemler.length-1] : null;
@@ -661,19 +677,14 @@ function asistanOgretmenProgramCevap(kisi, soru){
     const satirlar = [];
     sonDonem.aylar.forEach(ay=>{
       const ayAdi = (ay.ayEtiket||'').replace(/\s*\d{4}$/, '');
-      const buAy = [];
-      (veri.yerler||[]).forEach(y=>{
-        GUNLER.forEach(g=>{
-          const ids = (ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][g]) || [];
-          if(ids.includes(kisi.id)) buAy.push(g + ' — ' + y.ad);
-        });
-      });
+      const buAy = ayBulunanlari(ay);
       if(buAy.length) satirlar.push(ayAdi + ':\n' + buAy.map(b=>'  • ' + b).join('\n'));
     });
+    const yerNotu = yerFiltre ? (' (' + yerFiltre.ad + ')') : '';
     if(!satirlar.length){
-      return kisi.ad + ', yayınlanmış hiçbir dönemde nöbet listesinde görünmüyor.';
+      return kisi.ad + yerNotu + ', yayınlanmış hiçbir dönemde' + (yerFiltre ? ' bu yerde' : '') + ' nöbet listesinde görünmüyor.';
     }
-    return kisi.ad + ' (' + GRUP_ETIKET[kisi.grup] + ') — TÜM DÖNEM NÖBETLERİ:\n\n' + satirlar.join('\n\n');
+    return kisi.ad + ' (' + GRUP_ETIKET[kisi.grup] + ')' + yerNotu + ' — TÜM DÖNEM NÖBETLERİ:\n\n' + satirlar.join('\n\n');
   }
 
   const ay = asistanIlgiliAy(kisi.grup, soru);
@@ -681,17 +692,11 @@ function asistanOgretmenProgramCevap(kisi, soru){
     return 'Sorduğunuz aya ait yayınlanmış bir dönem bulamadım.';
   }
   if(!ay) return kisi.ad + ' için yayınlanmış bir program bulamadım.';
-  const gunFiltre = asistanGunSorudanBul(soru);
-  const bulunanlar = [];
-  (veri.yerler||[]).forEach(y=>{
-    (gunFiltre ? [gunFiltre] : GUNLER).forEach(g=>{
-      const ids = (ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][g]) || [];
-      if(ids.includes(kisi.id)) bulunanlar.push(g + ' — ' + y.ad);
-    });
-  });
+  const bulunanlar = ayBulunanlari(ay);
   const ayAdi = (ay.ayEtiket||'').replace(/\s*\d{4}$/, '');
   if(!bulunanlar.length){
-    return kisi.ad + ', ' + ayAdi + (gunFiltre ? ' ' + gunFiltre : '') + ' için nöbet listesinde görünmüyor (izinli/muaf olabilir).';
+    const yerNotu = yerFiltre ? (' ' + yerFiltre.ad + ' için') : '';
+    return kisi.ad + ',' + yerNotu + ' ' + ayAdi + (gunFiltre ? ' ' + gunFiltre : '') + ' için nöbet listesinde görünmüyor (izinli/muaf olabilir, ya da o ay o yerde/günde görevli değil).';
   }
   return kisi.ad + ' (' + GRUP_ETIKET[kisi.grup] + ') — ' + ayAdi + ' PROGRAMI:\n' + bulunanlar.map(b=>'• ' + b).join('\n');
 }
