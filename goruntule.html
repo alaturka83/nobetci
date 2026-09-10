@@ -18,7 +18,7 @@
 body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);}
 .wrap{max-width:1100px;margin:0 auto;padding:22px 16px 60px;}
 .header{background:var(--navy);color:#fff;border-radius:14px;padding:22px 24px;display:flex;align-items:center;gap:16px;margin-bottom:18px;}
-.header img{width:52px;height:52px;object-fit:contain;border-radius:10px;background:#fff;}
+.header img{width:52px;height:52px;object-fit:contain;border-radius:10px;}
 .header .h-title{font-size:19px;font-weight:800;letter-spacing:.3px;}
 .header .h-sub{font-size:13px;opacity:.85;margin-top:2px;}
 .updated{font-size:12px;color:var(--muted);margin-bottom:16px;}
@@ -38,6 +38,14 @@ table.data td.yer{background:var(--navy-soft);font-weight:700;color:var(--navy);
 .empty{color:#B7BDC9;}
 .msg{padding:40px 20px;text-align:center;color:var(--muted);font-size:14px;}
 .refresh{border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:10px;cursor:pointer;float:right;}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
+.filter-item{display:flex;flex-direction:column;gap:5px;min-width:180px;flex:1;}
+.filter-item label{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.3px;}
+.filter-item select{border:1.5px solid var(--line);border-radius:9px;padding:9px 10px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;}
+.filter-clear{align-self:flex-end;border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:12.5px;padding:9px 14px;border-radius:9px;cursor:pointer;}
+tr.row-hidden{display:none;}
+.cell-match{background:var(--gold-soft);font-weight:800;color:#8A5D14;border-radius:5px;padding:2px 4px;}
+.cell-dim{opacity:.3;}
 </style>
 </head>
 <body>
@@ -65,6 +73,8 @@ const GRUP_ETIKET = {sabah:'SABAHÇI GRUBU', oglen:'ÖĞLENCİ GRUBU'};
 let veri = null;
 let aktifGrup = 'sabah';
 let aktifDonemIdx = 0;
+let filtreYer = '';
+let filtreOgretmen = '';
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c])); }
 
@@ -82,8 +92,12 @@ function ogretmenAd(grup, id){
 }
 
 function renderHucre(ids, grup){
-  const names = (ids||[]).map(id=>ogretmenAd(grup, id)).filter(Boolean);
-  return names.length ? names.map(n=>`<div>${n}</div>`).join('') : '<span class="empty">&mdash;</span>';
+  const names = (ids||[]).map(id=>({id, ad:ogretmenAd(grup, id)})).filter(x=>x.ad);
+  if(!names.length) return '<span class="empty">&mdash;</span>';
+  return names.map(n=>{
+    const eslesti = filtreOgretmen && n.id === filtreOgretmen;
+    return `<div class="${eslesti ? 'cell-match' : (filtreOgretmen ? 'cell-dim' : '')}">${n.ad}</div>`;
+  }).join('');
 }
 
 function formatDateTR(dateStr){
@@ -96,11 +110,12 @@ function formatDateTR(dateStr){
 function renderAyTablosu(ay, grup, siraNo){
   const yerler = veri.yerler || [];
   const rows = yerler.map(y=>{
+    const gizli = filtreYer && y.id !== filtreYer;
     const cells = GUNLER.map(g=>{
       const ids = ay.tablo && ay.tablo[y.id] ? ay.tablo[y.id][g] : [];
       return `<td>${renderHucre(ids, grup)}</td>`;
     }).join('');
-    return `<tr><td class="yer">${esc(y.ad)}</td>${cells}</tr>`;
+    return `<tr class="${gizli ? 'row-hidden' : ''}"><td class="yer">${esc(y.ad)}</td>${cells}</tr>`;
   }).join('');
 
   const tarihAraligi = (ay.baslangicTarihi && ay.bitisTarihi)
@@ -147,6 +162,27 @@ function render(){
       <button data-grup="oglen" class="${aktifGrup==='oglen'?'active':''}">${GRUP_ETIKET.oglen}</button>
     </div>`;
 
+  const yerler = veri.yerler || [];
+  const ogretmenler = (veri.ogretmenler && veri.ogretmenler[aktifGrup]) || [];
+  const filterBarHtml = `
+    <div class="filter-bar">
+      <div class="filter-item">
+        <label>ÖĞRETMENE GÖRE FİLTRELE</label>
+        <select id="filtreOgretmenSel">
+          <option value="">TÜMÜ</option>
+          ${ogretmenler.map(o=>`<option value="${o.id}" ${o.id===filtreOgretmen?'selected':''}>${esc(o.ad)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>NÖBET YERİNE GÖRE FİLTRELE</label>
+        <select id="filtreYerSel">
+          <option value="">TÜMÜ</option>
+          ${yerler.map(y=>`<option value="${y.id}" ${y.id===filtreYer?'selected':''}>${esc(y.ad)}</option>`).join('')}
+        </select>
+      </div>
+      <button class="filter-clear" id="btnFiltreTemizle">FİLTREYİ TEMİZLE</button>
+    </div>`;
+
   let bodyHtml = '';
   if(!donemler.length){
     bodyHtml = '<div class="msg">BU GRUP İÇİN HENÜZ YAYINLANMIŞ BİR DÖNEM YOK.</div>';
@@ -160,11 +196,13 @@ function render(){
     bodyHtml = donemListHtml + aylarHtml;
   }
 
-  app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + bodyHtml;
+  app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + filterBarHtml + bodyHtml;
 
   document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
     aktifGrup = b.dataset.grup;
     aktifDonemIdx = 0;
+    filtreYer = '';
+    filtreOgretmen = '';
     render();
   });
   document.querySelectorAll('.donem-list button').forEach(b=>b.onclick=()=>{
@@ -173,6 +211,13 @@ function render(){
   });
   const btnYenile = document.getElementById('btnYenile');
   if(btnYenile) btnYenile.onclick = yukle;
+
+  const selOgretmen = document.getElementById('filtreOgretmenSel');
+  if(selOgretmen) selOgretmen.onchange = ()=>{ filtreOgretmen = selOgretmen.value; render(); };
+  const selYer = document.getElementById('filtreYerSel');
+  if(selYer) selYer.onchange = ()=>{ filtreYer = selYer.value; render(); };
+  const btnTemizle = document.getElementById('btnFiltreTemizle');
+  if(btnTemizle) btnTemizle.onclick = ()=>{ filtreYer=''; filtreOgretmen=''; render(); };
 }
 
 function yukle(){
