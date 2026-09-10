@@ -31,9 +31,10 @@ body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:va
 .tabs button{flex:1;border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:12px;padding:9px 8px;border-radius:9px;cursor:pointer;-webkit-user-select:none;user-select:none;}
 .tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
 
-.view-tabs{display:flex;gap:6px;margin-bottom:8px;}
-.view-tabs button{flex:1;border:1.5px solid var(--gold);background:#fff;color:#8A5D14;font-weight:700;font-size:11.5px;padding:7px 8px;border-radius:8px;cursor:pointer;-webkit-user-select:none;user-select:none;}
-.view-tabs button.active{background:var(--gold);color:#fff;border-color:var(--gold);}
+.view-toggle-label{font-size:9.5px;font-weight:800;color:var(--muted);letter-spacing:.5px;margin-bottom:5px;}
+.view-toggle{display:flex;background:var(--navy-soft);border-radius:10px;padding:3px;gap:3px;margin-bottom:8px;}
+.view-toggle button{flex:1;border:none;background:transparent;color:var(--navy);font-weight:700;font-size:12px;padding:8px 6px;border-radius:7px;cursor:pointer;-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:center;gap:5px;opacity:.65;}
+.view-toggle button.active{background:#fff;box-shadow:0 1px 4px rgba(20,25,40,.15);color:var(--navy);opacity:1;}
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;}
 .field{margin-bottom:8px;}
@@ -108,6 +109,8 @@ table.data td.stat-num-cell.stat-low{color:#8A5D14;}
   .filter-row{gap:14px;}
   .filter-clear{width:auto;float:right;margin-top:0;}
   .donem-baslik{font-size:16px;}
+  .view-toggle{max-width:280px;margin-bottom:14px;}
+  .view-toggle button{font-size:13px;}
   .desktop-table{display:block;}
   .mobile-cards{display:none;}
 }
@@ -376,15 +379,16 @@ function render(){
     </div>`;
 
   const viewTabsHtml = `
-    <div class="view-tabs">
-      <button data-view="program" class="${gorunum==='program'?'active':''}">PROGRAM</button>
-      <button data-view="istatistik" class="${gorunum==='istatistik'?'active':''}">İSTATİSTİKLER</button>
+    <div class="view-toggle-label">GÖRÜNÜM</div>
+    <div class="view-toggle">
+      <button data-view="program" class="${gorunum==='program'?'active':''}">📋 PROGRAM</button>
+      <button data-view="istatistik" class="${gorunum==='istatistik'?'active':''}">📊 İSTATİSTİKLER</button>
     </div>`;
 
   if(gorunum==='istatistik'){
     app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + viewTabsHtml + renderIstatistikIcerik(aktifGrup);
     document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ aktifGrup=b.dataset.grup; filtreYer=''; filtreOgretmen=''; istatistikArama=''; render(); });
-    document.querySelectorAll('.view-tabs button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
+    document.querySelectorAll('.view-toggle button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
     const bY = document.getElementById('btnYenile'); if(bY) bY.onclick = yukle;
     document.querySelectorAll('.stat-row-head').forEach(t=>t.onclick=()=>{ t.parentElement.classList.toggle('expanded'); });
     const statArama = document.getElementById('statAramaInput');
@@ -407,7 +411,7 @@ function render(){
   if(!aylar.length){
     app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + viewTabsHtml + '<div class="msg">BU GRUP İÇİN HENÜZ YAYINLANMIŞ BİR PROGRAM YOK.</div>';
     document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ aktifGrup=b.dataset.grup; aktifAyIdx=0; filtreYer=''; filtreOgretmen=''; render(); });
-    document.querySelectorAll('.view-tabs button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
+    document.querySelectorAll('.view-toggle button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
     const bY = document.getElementById('btnYenile'); if(bY) bY.onclick = yukle;
     return;
   }
@@ -453,7 +457,7 @@ function render(){
     filtreOgretmen = '';
     render();
   });
-  document.querySelectorAll('.view-tabs button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
+  document.querySelectorAll('.view-toggle button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
   const btnYenile = document.getElementById('btnYenile');
   if(btnYenile) btnYenile.onclick = yukle;
 
