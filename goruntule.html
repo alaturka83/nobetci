@@ -329,7 +329,8 @@ function renderIstatistikIcerik(grup){
 
   return `
     <div class="donem-baslik">NÖBET DAĞITIM İSTATİSTİKLERİ</div>
-    <div class="stat-legend">${donemSayisi} DÖNEM ÜZERİNDEN TOPLAM NÖBET SAYILARI. <span style="color:#B3261E;font-weight:800;">KIRMIZI</span> = ORTALAMANIN BELİRGİN ÜZERİNDE, <span style="color:var(--gold);font-weight:800;">ALTIN</span> = ORTALAMANIN BELİRGİN ALTINDA.</div>
+    <div class="stat-legend mobile-cards">İSİMLERİN ÜZERİNE DOKUNARAK GÜN VE YER DAĞILIMINI GÖREBİLİRSİNİZ. <span style="color:#B3261E;font-weight:800;">KIRMIZI</span> = ORTALAMANIN BELİRGİN ÜZERİNDE, <span style="color:var(--gold);font-weight:800;">ALTIN</span> = ORTALAMANIN BELİRGİN ALTINDA.</div>
+    <div class="stat-legend desktop-table">${donemSayisi} DÖNEM ÜZERİNDEN TOPLAM NÖBET SAYILARI. <span style="color:#B3261E;font-weight:800;">KIRMIZI</span> = ORTALAMANIN BELİRGİN ÜZERİNDE, <span style="color:var(--gold);font-weight:800;">ALTIN</span> = ORTALAMANIN BELİRGİN ALTINDA.</div>
     <div class="mobile-cards">${rowsMobile}</div>
     <div class="desktop-table">
     <table class="data">
