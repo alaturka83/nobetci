@@ -31,6 +31,10 @@ body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:va
 .tabs button{flex:1;border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:12px;padding:9px 8px;border-radius:9px;cursor:pointer;-webkit-user-select:none;user-select:none;}
 .tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
 
+.view-tabs{display:flex;gap:6px;margin-bottom:8px;}
+.view-tabs button{flex:1;border:1.5px solid var(--gold);background:#fff;color:#8A5D14;font-weight:700;font-size:11.5px;padding:7px 8px;border-radius:8px;cursor:pointer;-webkit-user-select:none;user-select:none;}
+.view-tabs button.active{background:var(--gold);color:#fff;border-color:var(--gold);}
+
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;}
 .field{margin-bottom:8px;}
 .field:last-child{margin-bottom:0;}
@@ -66,6 +70,26 @@ table.data th{background:var(--navy-soft);color:var(--navy);font-weight:800;font
 table.data td.yer{background:var(--navy-soft);font-weight:700;color:var(--navy);text-align:left;}
 
 .msg{padding:30px 16px;text-align:center;color:var(--muted);font-size:13px;}
+
+.stat-row{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;}
+.stat-row-head{padding:9px 10px;cursor:pointer;display:flex;align-items:center;gap:10px;-webkit-user-select:none;user-select:none;}
+.stat-row-head .stat-ad{flex:1;font-weight:800;font-size:12.5px;color:var(--text);}
+.stat-row-head .stat-num{font-weight:800;font-size:13px;color:var(--navy);flex:0 0 auto;}
+.stat-row-head .stat-num.stat-high{color:#B3261E;}
+.stat-row-head .stat-num.stat-low{color:#8A5D14;}
+.stat-bar-track{height:5px;border-radius:4px;background:var(--navy-soft);overflow:hidden;margin-top:5px;}
+.stat-bar-fill{height:100%;background:var(--navy);border-radius:4px;}
+.stat-bar-fill.stat-high{background:#B3261E;}
+.stat-bar-fill.stat-low{background:var(--gold);}
+.stat-row-body{display:none;padding:0 10px 10px;}
+.stat-row.expanded .stat-row-body{display:block;}
+.stat-pill-group{margin-top:6px;}
+.stat-pill-group-title{font-size:9.5px;font-weight:800;color:var(--muted);letter-spacing:.3px;margin-bottom:4px;}
+.stat-pill{display:inline-block;background:var(--navy-soft);color:var(--navy);font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;margin:0 4px 4px 0;}
+.stat-legend{font-size:10.5px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
+table.data td.stat-num-cell{font-weight:800;color:var(--navy);}
+table.data td.stat-num-cell.stat-high{color:#B3261E;}
+table.data td.stat-num-cell.stat-low{color:#8A5D14;}
 
 @media (min-width: 640px){
   body{font-size:15px;}
@@ -114,6 +138,7 @@ let aktifGrup = 'sabah';
 let aktifAyIdx = 0;
 let filtreYer = '';
 let filtreOgretmen = '';
+let gorunum = 'program'; // 'program' | 'istatistik'
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c])); }
 
@@ -201,6 +226,119 @@ function renderAyIcerik(ay, grup){
     </div>`;
 }
 
+// Tüm yayınlanmış dönemlerdeki (ay tekrar etmeyecek şekilde) nöbet
+// sayılarını öğretmen bazında toplar — gün ve yer kırılımıyla birlikte.
+function hesaplaIstatistik(grup){
+  const teachers = (veri.ogretmenler && veri.ogretmenler[grup]) || [];
+  const yerler = veri.yerler || [];
+  const donemler = (veri.dagitimlar && veri.dagitimlar[grup]) || [];
+
+  const uniqueAylarMap = {};
+  donemler.forEach(b=>{
+    (b.aylar || []).forEach(ay=>{ uniqueAylarMap[ay.ay] = ay; });
+  });
+  const uniqueAylar = Object.values(uniqueAylarMap);
+
+  const stats = {};
+  teachers.forEach(t=>{
+    stats[t.id] = { id:t.id, ad:t.ad, total:0, days:{PAZARTESİ:0,SALI:0,ÇARŞAMBA:0,PERŞEMBE:0,CUMA:0}, places:{} };
+    yerler.forEach(y=>{ stats[t.id].places[y.id] = 0; });
+  });
+
+  uniqueAylar.forEach(ay=>{
+    Object.keys(ay.tablo || {}).forEach(yId=>{
+      GUNLER.forEach(g=>{
+        (ay.tablo[yId][g] || []).forEach(tId=>{
+          if(stats[tId]){
+            stats[tId].total++;
+            stats[tId].days[g] = (stats[tId].days[g] || 0) + 1;
+            stats[tId].places[yId] = (stats[tId].places[yId] || 0) + 1;
+          }
+        });
+      });
+    });
+  });
+
+  return { list: Object.values(stats), donemSayisi: uniqueAylar.length };
+}
+
+function renderIstatistikIcerik(grup){
+  const { list, donemSayisi } = hesaplaIstatistik(grup);
+  const yerler = veri.yerler || [];
+
+  if(!donemSayisi || !list.length){
+    return '<div class="msg">BU GRUP İÇİN HENÜZ İSTATİSTİK OLUŞTURACAK YAYINLANMIŞ DÖNEM YOK.</div>';
+  }
+
+  const totals = list.map(s=>s.total).filter(n=>n>0);
+  const maxTotal = totals.length ? Math.max(...totals) : 0;
+  const avgTotal = totals.length ? (totals.reduce((a,b)=>a+b,0) / totals.length) : 0;
+
+  const sorted = list.slice().sort((a,b)=>a.ad.localeCompare(b.ad,'tr'));
+
+  const rowsMobile = sorted.map(s=>{
+    let cls = '';
+    if(avgTotal>0 && s.total>0){
+      if(s.total >= avgTotal*1.25) cls = 'stat-high';
+      else if(s.total <= avgTotal*0.75) cls = 'stat-low';
+    }
+    const barPct = maxTotal>0 ? Math.round((s.total/maxTotal)*100) : 0;
+    const eslesti = filtreOgretmen && s.id === filtreOgretmen;
+    const dayPills = GUNLER.map(g=>`<span class="stat-pill">${g.slice(0,3)}: ${s.days[g]||0}</span>`).join('');
+    const placePills = yerler.map(y=>`<span class="stat-pill">${esc(y.ad)}: ${s.places[y.id]||0}</span>`).join('');
+    return `<div class="stat-row ${eslesti?'expanded':''}">
+      <div class="stat-row-head">
+        <div style="flex:1;">
+          <div class="stat-ad">${esc(s.ad)}</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill ${cls}" style="width:${barPct}%"></div></div>
+        </div>
+        <div class="stat-num ${cls}">${s.total}</div>
+      </div>
+      <div class="stat-row-body">
+        <div class="stat-pill-group">
+          <div class="stat-pill-group-title">GÜN DAĞILIMI</div>
+          ${dayPills}
+        </div>
+        <div class="stat-pill-group">
+          <div class="stat-pill-group-title">YER DAĞILIMI</div>
+          ${placePills}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const rowsDesktop = sorted.map(s=>{
+    let cls = '';
+    if(avgTotal>0 && s.total>0){
+      if(s.total >= avgTotal*1.25) cls = 'stat-high';
+      else if(s.total <= avgTotal*0.75) cls = 'stat-low';
+    }
+    const barPct = maxTotal>0 ? Math.round((s.total/maxTotal)*100) : 0;
+    const dayPills = GUNLER.map(g=>`<span class="stat-pill">${g.slice(0,3)}: ${s.days[g]||0}</span>`).join('');
+    const placePills = yerler.map(y=>`<span class="stat-pill">${esc(y.ad)}: ${s.places[y.id]||0}</span>`).join('');
+    return `<tr>
+      <td style="text-align:left;font-weight:700;">${esc(s.ad)}</td>
+      <td class="stat-num-cell ${cls}">
+        ${s.total}
+        <div class="stat-bar-track"><div class="stat-bar-fill ${cls}" style="width:${barPct}%"></div></div>
+      </td>
+      <td>${dayPills}</td>
+      <td>${placePills}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="donem-baslik">NÖBET DAĞITIM İSTATİSTİKLERİ</div>
+    <div class="stat-legend">${donemSayisi} DÖNEM ÜZERİNDEN TOPLAM NÖBET SAYILARI. <span style="color:#B3261E;font-weight:800;">KIRMIZI</span> = ORTALAMANIN BELİRGİN ÜZERİNDE, <span style="color:var(--gold);font-weight:800;">ALTIN</span> = ORTALAMANIN BELİRGİN ALTINDA.</div>
+    <div class="mobile-cards">${rowsMobile}</div>
+    <div class="desktop-table">
+    <table class="data">
+      <tr><th>ÖĞRETMEN ADI</th><th>TOPLAM NÖBET</th><th>GÜN DAĞILIMI</th><th>YER DAĞILIMI</th></tr>
+      ${rowsDesktop}
+    </table>
+    </div>`;
+}
+
 function render(){
   const app = document.getElementById('app');
   if(!veri || !veri.dagitimlar){
@@ -231,9 +369,25 @@ function render(){
       <button data-grup="oglen" class="${aktifGrup==='oglen'?'active':''}">${GRUP_ETIKET.oglen}</button>
     </div>`;
 
+  const viewTabsHtml = `
+    <div class="view-tabs">
+      <button data-view="program" class="${gorunum==='program'?'active':''}">PROGRAM</button>
+      <button data-view="istatistik" class="${gorunum==='istatistik'?'active':''}">İSTATİSTİKLER</button>
+    </div>`;
+
+  if(gorunum==='istatistik'){
+    app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + viewTabsHtml + renderIstatistikIcerik(aktifGrup);
+    document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ aktifGrup=b.dataset.grup; filtreYer=''; filtreOgretmen=''; render(); });
+    document.querySelectorAll('.view-tabs button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
+    const bY = document.getElementById('btnYenile'); if(bY) bY.onclick = yukle;
+    document.querySelectorAll('.stat-row-head').forEach(t=>t.onclick=()=>{ t.parentElement.classList.toggle('expanded'); });
+    return;
+  }
+
   if(!aylar.length){
-    app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + '<div class="msg">BU GRUP İÇİN HENÜZ YAYINLANMIŞ BİR PROGRAM YOK.</div>';
+    app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + viewTabsHtml + '<div class="msg">BU GRUP İÇİN HENÜZ YAYINLANMIŞ BİR PROGRAM YOK.</div>';
     document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ aktifGrup=b.dataset.grup; aktifAyIdx=0; filtreYer=''; filtreOgretmen=''; render(); });
+    document.querySelectorAll('.view-tabs button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
     const bY = document.getElementById('btnYenile'); if(bY) bY.onclick = yukle;
     return;
   }
@@ -270,7 +424,7 @@ function render(){
 
   const ayIcerikHtml = renderAyIcerik(aylar[aktifAyIdx], aktifGrup);
 
-  app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + panelHtml + ayIcerikHtml;
+  app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + viewTabsHtml + panelHtml + ayIcerikHtml;
 
   document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
     aktifGrup = b.dataset.grup;
@@ -279,6 +433,7 @@ function render(){
     filtreOgretmen = '';
     render();
   });
+  document.querySelectorAll('.view-tabs button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
   const btnYenile = document.getElementById('btnYenile');
   if(btnYenile) btnYenile.onclick = yukle;
 
