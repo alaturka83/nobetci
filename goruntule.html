@@ -16,71 +16,70 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{-webkit-text-size-adjust:100%;}
-body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px;}
-.wrap{max-width:1100px;margin:0 auto;padding:14px 10px 50px;}
-.header{background:var(--navy);color:#fff;border-radius:14px;padding:16px 16px;display:flex;align-items:center;gap:12px;margin-bottom:12px;}
-.header img{width:44px;height:44px;object-fit:contain;border-radius:9px;flex-shrink:0;}
-.header .h-title{font-size:16px;font-weight:800;letter-spacing:.2px;line-height:1.25;}
-.header .h-sub{font-size:12px;opacity:.85;margin-top:2px;line-height:1.3;}
-.updated{font-size:11.5px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
-.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
-.tabs button{border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:13px;padding:12px 16px;border-radius:10px;cursor:pointer;flex:1 1 auto;min-height:44px;-webkit-user-select:none;user-select:none;}
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+.wrap{max-width:1000px;margin:0 auto;padding:10px 10px 30px;}
+
+.header{background:var(--navy);color:#fff;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+.header img{width:32px;height:32px;object-fit:contain;border-radius:7px;flex-shrink:0;}
+.header .h-title{font-size:13.5px;font-weight:800;letter-spacing:.1px;line-height:1.2;}
+.header .h-sub{font-size:10.5px;opacity:.85;margin-top:1px;line-height:1.2;}
+
+.updated{font-size:10.5px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.refresh{border:1px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:11px;padding:6px 11px;border-radius:8px;cursor:pointer;}
+
+.tabs{display:flex;gap:6px;margin-bottom:8px;}
+.tabs button{flex:1;border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:12px;padding:9px 8px;border-radius:9px;cursor:pointer;-webkit-user-select:none;user-select:none;}
 .tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
-.donem-list{display:flex;gap:8px;margin-bottom:14px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
-.donem-list button{border:1.5px solid var(--gold);background:var(--gold-soft);color:#8A5D14;font-weight:700;font-size:12.5px;padding:10px 16px;border-radius:20px;cursor:pointer;white-space:nowrap;min-height:40px;flex-shrink:0;}
-.donem-list button.active{background:var(--gold);color:#fff;}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 1px 2px rgba(20,25,40,.04);}
-.card h2{font-size:13.5px;margin:0 0 10px;color:var(--navy);line-height:1.35;}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;}
+.field{margin-bottom:8px;}
+.field:last-child{margin-bottom:0;}
+.field label{display:block;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.3px;margin-bottom:4px;}
+.field select{border:1.5px solid var(--line);border-radius:8px;padding:9px 9px;font-size:15px;font-family:inherit;color:var(--text);background:#fff;width:100%;min-height:40px;}
+.field select.ay-select{font-weight:800;color:var(--navy);border-color:var(--gold);background:var(--gold-soft);}
+.filter-row{display:flex;gap:8px;}
+.filter-row .field{flex:1;margin-bottom:0;}
+.filter-clear{margin-top:8px;width:100%;border:1px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:11.5px;padding:8px 10px;border-radius:8px;cursor:pointer;}
+
+.donem-baslik{font-size:13px;font-weight:800;color:var(--navy);margin:2px 0 8px;}
+
+.yer-block{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;}
+.yer-block.yer-hidden{display:none;}
+.yer-block-title{background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:12px;padding:7px 10px;}
+.day-row{display:flex;padding:7px 10px;border-top:1px solid var(--line);gap:8px;}
+.day-row .day-label{flex:0 0 74px;font-size:10.5px;font-weight:800;color:var(--muted);padding-top:1px;}
+.day-row .day-names{flex:1;font-size:12.5px;line-height:1.45;}
+.day-row .day-names .isim{display:block;}
+.day-row .day-names .isim + .isim{margin-top:1px;}
 .empty{color:#B7BDC9;}
-.msg{padding:40px 16px;text-align:center;color:var(--muted);font-size:14px;}
-.refresh{border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:12px;padding:9px 14px;border-radius:9px;cursor:pointer;min-height:40px;}
-.filter-bar{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;}
-.filter-item{display:flex;flex-direction:column;gap:5px;width:100%;}
-.filter-item label{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.3px;}
-.filter-item select{border:1.5px solid var(--line);border-radius:9px;padding:11px 10px;font-size:16px;font-family:inherit;color:var(--text);background:#fff;min-height:44px;width:100%;}
-.filter-clear{border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:13px;padding:11px 14px;border-radius:9px;cursor:pointer;min-height:44px;width:100%;}
-.cell-match{background:var(--gold-soft);font-weight:800;color:#8A5D14;border-radius:5px;padding:2px 6px;display:inline-block;}
+.cell-match{background:var(--gold-soft);font-weight:800;color:#8A5D14;border-radius:5px;padding:1px 5px;display:inline-block;}
 .cell-dim{opacity:.35;}
 
-/* ---- Mobil: dikey kart görünümü (varsayılan) ---- */
 .desktop-table{display:none;}
-.mobile-cards{display:block;}
-.yer-block{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;}
-.yer-block.yer-hidden{display:none;}
-.yer-block-title{background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:13px;padding:10px 12px;}
-.day-row{display:flex;padding:10px 12px;border-top:1px solid var(--line);gap:10px;}
-.day-row .day-label{flex:0 0 92px;font-size:11.5px;font-weight:800;color:var(--muted);padding-top:2px;}
-.day-row .day-names{flex:1;font-size:13.5px;line-height:1.5;}
-.day-row .day-names .isim{display:block;}
-.day-row .day-names .isim + .isim{margin-top:2px;}
-
-@media (min-width: 640px){
-  .desktop-table{display:block;}
-  .mobile-cards{display:none;}
-}
-
-/* ---- Masaüstü tablo (≥640px) ---- */
 table.data{width:100%;border-collapse:collapse;font-size:13px;}
-table.data th, table.data td{border:1px solid var(--line);padding:9px 10px;text-align:center;vertical-align:middle;}
+table.data th, table.data td{border:1px solid var(--line);padding:8px 9px;text-align:center;vertical-align:middle;}
 table.data th{background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:12px;}
 table.data td.yer{background:var(--navy-soft);font-weight:700;color:var(--navy);text-align:left;}
 
+.msg{padding:30px 16px;text-align:center;color:var(--muted);font-size:13px;}
+
 @media (min-width: 640px){
+  body{font-size:15px;}
   .wrap{padding:22px 16px 60px;}
-  .header{padding:22px 24px;gap:16px;}
-  .header img{width:52px;height:52px;border-radius:10px;}
-  .header .h-title{font-size:19px;}
-  .header .h-sub{font-size:13px;}
-  .updated{font-size:12px;}
-  .tabs button{flex:0 1 auto;font-size:13px;padding:10px 16px;min-height:auto;}
-  .donem-list{flex-wrap:wrap;overflow-x:visible;}
-  .card{padding:20px;}
-  .card h2{font-size:15px;}
-  .refresh{float:right;}
-  .filter-bar{flex-direction:row;flex-wrap:wrap;padding:14px 16px;}
-  .filter-item{min-width:180px;flex:1;}
-  .filter-item select{font-size:13px;min-height:auto;}
-  .filter-clear{align-self:flex-end;width:auto;min-height:auto;}
+  .header{padding:18px 22px;gap:14px;border-radius:14px;}
+  .header img{width:46px;height:46px;border-radius:9px;}
+  .header .h-title{font-size:18px;}
+  .header .h-sub{font-size:12.5px;}
+  .updated{font-size:12px;margin-bottom:14px;}
+  .tabs{margin-bottom:14px;}
+  .tabs button{flex:0 1 auto;font-size:13px;padding:9px 18px;}
+  .panel{padding:16px 18px;margin-bottom:14px;}
+  .field select{font-size:13px;min-height:auto;}
+  .filter-row{gap:14px;}
+  .filter-clear{width:auto;float:right;margin-top:0;}
+  .donem-baslik{font-size:16px;}
+  .desktop-table{display:block;}
+  .mobile-cards{display:none;}
 }
 </style>
 </head>
@@ -108,7 +107,7 @@ const GRUP_ETIKET = {sabah:'SABAHÇI GRUBU', oglen:'ÖĞLENCİ GRUBU'};
 
 let veri = null;
 let aktifGrup = 'sabah';
-let aktifDonemIdx = 0;
+let aktifAyIdx = 0;
 let filtreYer = '';
 let filtreOgretmen = '';
 
@@ -119,6 +118,13 @@ function formatTarih(iso){
   const d = new Date(iso);
   if(isNaN(d)) return '';
   return d.toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+
+function formatDateTR(dateStr){
+  if(!dateStr) return '';
+  const p = dateStr.split('-');
+  if(p.length !== 3) return dateStr;
+  return p[2] + '.' + p[1] + '.' + p[0];
 }
 
 function ogretmenAd(grup, id){
@@ -136,17 +142,20 @@ function renderHucre(ids, grup){
   }).join('');
 }
 
-function formatDateTR(dateStr){
-  if(!dateStr) return '';
-  const p = dateStr.split('-');
-  if(p.length !== 3) return dateStr;
-  return p[2] + '.' + p[1] + '.' + p[0];
+// Bugünün tarihine en yakın / içinde bulunulan ayı bulur; yoksa son ayı döner.
+function varsayilanAyIdx(aylar){
+  if(!aylar || !aylar.length) return 0;
+  const bugun = new Date(); bugun.setHours(0,0,0,0);
+  for(let i=0;i<aylar.length;i++){
+    const bit = aylar[i].bitisTarihi ? new Date(aylar[i].bitisTarihi) : null;
+    if(bit && bit >= bugun) return i;
+  }
+  return aylar.length - 1;
 }
 
-function renderAyTablosu(ay, grup, siraNo){
+function renderAyIcerik(ay, grup){
   const yerler = veri.yerler || [];
 
-  // Masaüstü tablo
   const rows = yerler.map(y=>{
     const gizli = filtreYer && y.id !== filtreYer;
     const cells = GUNLER.map(g=>{
@@ -156,7 +165,6 @@ function renderAyTablosu(ay, grup, siraNo){
     return `<tr style="${gizli ? 'display:none;' : ''}"><td class="yer">${esc(y.ad)}</td>${cells}</tr>`;
   }).join('');
 
-  // Mobil dikey kartlar
   const yerBloklari = yerler.map(y=>{
     const gizli = filtreYer && y.id !== filtreYer;
     const gunSatirlari = GUNLER.map(g=>{
@@ -174,16 +182,14 @@ function renderAyTablosu(ay, grup, siraNo){
     : '';
 
   return `
-  <div class="card">
-    <h2>${esc((ay.ayEtiket || '').replace(/\s*\d{4}$/, ''))} PROGRAMI${tarihAraligi ? ' (' + tarihAraligi + ')' : ''}</h2>
+    <div class="donem-baslik">${esc((ay.ayEtiket || '').replace(/\s*\d{4}$/, ''))} PROGRAMI${tarihAraligi ? ' (' + tarihAraligi + ')' : ''}</div>
     <div class="mobile-cards">${yerBloklari}</div>
     <div class="desktop-table">
     <table class="data">
       <tr><th>NÖBET YERİ</th>${GUNLER.map(g=>`<th>${g}</th>`).join('')}</tr>
       ${rows}
     </table>
-    </div>
-  </div>`;
+    </div>`;
 }
 
 function render(){
@@ -195,7 +201,9 @@ function render(){
 
   const kurum = veri.kurum || {};
   const donemler = (veri.dagitimlar[aktifGrup] || []);
-  if(aktifDonemIdx >= donemler.length) aktifDonemIdx = donemler.length ? donemler.length - 1 : 0;
+  const sonDonem = donemler.length ? donemler[donemler.length - 1] : null;
+  const aylar = sonDonem ? (sonDonem.aylar || []) : [];
+  if(aktifAyIdx >= aylar.length) aktifAyIdx = 0;
 
   const headerHtml = `
     <div class="header">
@@ -206,7 +214,7 @@ function render(){
       </div>
     </div>`;
 
-  const guncellemeHtml = `<div class="updated">SON YAYIN: ${formatTarih(veri.yayinTarihi)} <button class="refresh" id="btnYenile">YENİLE</button></div>`;
+  const guncellemeHtml = `<div class="updated"><span>SON YAYIN: ${formatTarih(veri.yayinTarihi)}</span><button class="refresh" id="btnYenile">YENİLE</button></div>`;
 
   const tabsHtml = `
     <div class="tabs">
@@ -214,56 +222,59 @@ function render(){
       <button data-grup="oglen" class="${aktifGrup==='oglen'?'active':''}">${GRUP_ETIKET.oglen}</button>
     </div>`;
 
-  const yerler = veri.yerler || [];
-  const ogretmenler = (veri.ogretmenler && veri.ogretmenler[aktifGrup]) || [];
-  const filterBarHtml = `
-    <div class="filter-bar">
-      <div class="filter-item">
-        <label>ÖĞRETMENE GÖRE FİLTRELE</label>
-        <select id="filtreOgretmenSel">
-          <option value="">TÜMÜ</option>
-          ${ogretmenler.map(o=>`<option value="${o.id}" ${o.id===filtreOgretmen?'selected':''}>${esc(o.ad)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="filter-item">
-        <label>NÖBET YERİNE GÖRE FİLTRELE</label>
-        <select id="filtreYerSel">
-          <option value="">TÜMÜ</option>
-          ${yerler.map(y=>`<option value="${y.id}" ${y.id===filtreYer?'selected':''}>${esc(y.ad)}</option>`).join('')}
-        </select>
-      </div>
-      <button class="filter-clear" id="btnFiltreTemizle">FİLTREYİ TEMİZLE</button>
-    </div>`;
-
-  let bodyHtml = '';
-  if(!donemler.length){
-    bodyHtml = '<div class="msg">BU GRUP İÇİN HENÜZ YAYINLANMIŞ BİR DÖNEM YOK.</div>';
-  } else {
-    const donemListHtml = `
-      <div class="donem-list">
-        ${donemler.map((b,i)=>`<button data-idx="${i}" class="${i===aktifDonemIdx?'active':''}">${esc((b.aylar||[]).map(a=>a.ayEtiket).join(', '))}</button>`).join('')}
-      </div>`;
-    const secili = donemler[aktifDonemIdx];
-    const aylarHtml = (secili.aylar || []).map((ay, idx)=>renderAyTablosu(ay, aktifGrup, idx+1)).join('');
-    bodyHtml = donemListHtml + aylarHtml;
+  if(!aylar.length){
+    app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + '<div class="msg">BU GRUP İÇİN HENÜZ YAYINLANMIŞ BİR PROGRAM YOK.</div>';
+    document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ aktifGrup=b.dataset.grup; aktifAyIdx=0; filtreYer=''; filtreOgretmen=''; render(); });
+    const bY = document.getElementById('btnYenile'); if(bY) bY.onclick = yukle;
+    return;
   }
 
-  app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + filterBarHtml + bodyHtml;
+  const yerler = veri.yerler || [];
+  const ogretmenler = (veri.ogretmenler && veri.ogretmenler[aktifGrup]) || [];
+
+  const panelHtml = `
+    <div class="panel">
+      <div class="field">
+        <label>AY SEÇİN</label>
+        <select id="aySel" class="ay-select">
+          ${aylar.map((a,i)=>`<option value="${i}" ${i===aktifAyIdx?'selected':''}>${esc((a.ayEtiket||'').replace(/\s*\d{4}$/, ''))} PROGRAMI</option>`).join('')}
+        </select>
+      </div>
+      <div class="field filter-row">
+        <div class="field">
+          <label>ÖĞRETMEN</label>
+          <select id="filtreOgretmenSel">
+            <option value="">TÜMÜ</option>
+            ${ogretmenler.map(o=>`<option value="${o.id}" ${o.id===filtreOgretmen?'selected':''}>${esc(o.ad)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>NÖBET YERİ</label>
+          <select id="filtreYerSel">
+            <option value="">TÜMÜ</option>
+            ${yerler.map(y=>`<option value="${y.id}" ${y.id===filtreYer?'selected':''}>${esc(y.ad)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      ${(filtreYer || filtreOgretmen) ? `<button class="filter-clear" id="btnFiltreTemizle">FİLTREYİ TEMİZLE</button>` : ''}
+    </div>`;
+
+  const ayIcerikHtml = renderAyIcerik(aylar[aktifAyIdx], aktifGrup);
+
+  app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + panelHtml + ayIcerikHtml;
 
   document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
     aktifGrup = b.dataset.grup;
-    aktifDonemIdx = 0;
+    aktifAyIdx = 0;
     filtreYer = '';
     filtreOgretmen = '';
-    render();
-  });
-  document.querySelectorAll('.donem-list button').forEach(b=>b.onclick=()=>{
-    aktifDonemIdx = Number(b.dataset.idx);
     render();
   });
   const btnYenile = document.getElementById('btnYenile');
   if(btnYenile) btnYenile.onclick = yukle;
 
+  const aySel = document.getElementById('aySel');
+  if(aySel) aySel.onchange = ()=>{ aktifAyIdx = Number(aySel.value); render(); };
   const selOgretmen = document.getElementById('filtreOgretmenSel');
   if(selOgretmen) selOgretmen.onchange = ()=>{ filtreOgretmen = selOgretmen.value; render(); };
   const selYer = document.getElementById('filtreYerSel');
@@ -277,6 +288,9 @@ function yukle(){
   fbDb.ref('nobetListesi').once('value')
     .then(snap=>{
       veri = snap.val();
+      const donemler = veri && veri.dagitimlar ? (veri.dagitimlar[aktifGrup] || []) : [];
+      const sonDonem = donemler.length ? donemler[donemler.length - 1] : null;
+      aktifAyIdx = sonDonem ? varsayilanAyIdx(sonDonem.aylar || []) : 0;
       render();
     })
     .catch(err=>{
