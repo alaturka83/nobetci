@@ -94,6 +94,32 @@ table.data td.stat-num-cell{font-weight:800;color:var(--navy);}
 table.data td.stat-num-cell.stat-high{color:#B3261E;}
 table.data td.stat-num-cell.stat-low{color:#8A5D14;}
 
+/* ---- Sanal Asistan ---- */
+.asistan-fab{position:fixed;right:14px;bottom:14px;z-index:400;width:52px;height:52px;border-radius:50%;background:var(--navy);color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 14px rgba(20,25,40,.3);display:flex;align-items:center;justify-content:center;}
+.asistan-fab .dot{position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--gold);border:2px solid var(--navy);display:none;}
+.asistan-fab.uyari .dot{display:block;}
+.asistan-backdrop{position:fixed;inset:0;background:rgba(10,15,25,.45);z-index:410;display:none;}
+.asistan-backdrop.acik{display:block;}
+.asistan-panel{position:fixed;top:0;right:0;bottom:0;width:100%;max-width:380px;background:var(--bg);z-index:420;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease;box-shadow:-6px 0 24px rgba(0,0,0,.18);}
+.asistan-panel.acik{transform:translateX(0);}
+.asistan-head{background:var(--navy);color:#fff;padding:14px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.asistan-head .av{width:34px;height:34px;border-radius:50%;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.asistan-head .tit{flex:1;}
+.asistan-head .tit .t1{font-weight:800;font-size:13.5px;}
+.asistan-head .tit .t2{font-size:10.5px;opacity:.8;}
+.asistan-close{background:rgba(255,255,255,.12);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:15px;cursor:pointer;flex-shrink:0;}
+.asistan-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;}
+.asistan-msg{display:flex;margin-bottom:10px;}
+.asistan-msg.user{justify-content:flex-end;}
+.asistan-bubble{max-width:85%;padding:9px 12px;border-radius:14px;font-size:12.5px;line-height:1.5;white-space:pre-line;}
+.asistan-msg.bot .asistan-bubble{background:#fff;border:1px solid var(--line);color:var(--text);border-bottom-left-radius:4px;}
+.asistan-msg.user .asistan-bubble{background:var(--navy);color:#fff;border-bottom-right-radius:4px;}
+.asistan-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px;}
+.asistan-chip{border:1.5px solid var(--gold);background:var(--gold-soft);color:#8A5D14;font-weight:700;font-size:11.5px;padding:7px 11px;border-radius:16px;cursor:pointer;}
+.asistan-inputrow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:#fff;flex-shrink:0;}
+.asistan-inputrow input{flex:1;border:1.5px solid var(--line);border-radius:20px;padding:10px 14px;font-size:15px;font-family:inherit;}
+.asistan-inputrow button{border:none;background:var(--navy);color:#fff;width:40px;height:40px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0;}
+
 @media (min-width: 640px){
   body{font-size:15px;}
   .wrap{padding:22px 16px 60px;}
@@ -119,6 +145,24 @@ table.data td.stat-num-cell.stat-low{color:#8A5D14;}
 <body>
 <div class="wrap">
   <div id="app"><div class="msg">YÜKLENİYOR…</div></div>
+</div>
+
+<button class="asistan-fab" id="asistanFab" aria-label="Sanal Asistan">💬<span class="dot"></span></button>
+<div class="asistan-backdrop" id="asistanBackdrop"></div>
+<div class="asistan-panel" id="asistanPanel">
+  <div class="asistan-head">
+    <div class="av">🤖</div>
+    <div class="tit">
+      <div class="t1">SANAL ASİSTAN</div>
+      <div class="t2">Nöbet programınızla ilgili sorun</div>
+    </div>
+    <button class="asistan-close" id="asistanClose">✕</button>
+  </div>
+  <div class="asistan-body" id="asistanBody"></div>
+  <div class="asistan-inputrow">
+    <input type="text" id="asistanInput" placeholder="Bir soru yazın…">
+    <button id="asistanGonder" aria-label="Gönder">➤</button>
+  </div>
 </div>
 
 <script>
@@ -484,11 +528,290 @@ function yukle(){
       const sonDonem = donemler.length ? donemler[donemler.length - 1] : null;
       aktifAyIdx = sonDonem ? varsayilanAyIdx(sonDonem.aylar || []) : 0;
       render();
+      asistanIlkYuklemeyiIsaretle();
     })
     .catch(err=>{
       document.getElementById('app').innerHTML = '<div class="msg">VERİ YÜKLENEMEDİ: ' + esc(err.message) + '</div>';
     });
 }
+
+/* ==============================================================
+ * asistan.js — Kural tabanlı "sanal asistan": öğretmenlerin sıkça
+ * sorduğu soruları (bugün/yarın kim nöbetçi, filanca öğretmen ne
+ * zaman nöbetçi, en çok kim nöbet tuttu, filtre nasıl çalışır vb.)
+ * doğrudan yayınlanmış veriden (veri objesi) yanıtlar. Sunucu/LLM
+ * çağrısı yapmaz — tamamen istemci tarafında çalışır.
+ * ============================================================== */
+
+let asistanAcikMi = false;
+let asistanOtoAcildi = false;
+const asistanGunSira = ['PAZAR','PAZARTESİ','SALI','ÇARŞAMBA','PERŞEMBE','CUMA','CUMARTESİ'];
+
+function asistanIlkYuklemeyiIsaretle(){
+  if(asistanOtoAcildi) return;
+  asistanOtoAcildi = true;
+  setTimeout(()=>{ asistanAc(true); }, 400);
+}
+
+function asistanNormalize(s){
+  return (s||'').toLocaleUpperCase('tr').replace(/İ/g,'İ').trim();
+}
+
+function asistanBugun(ofsetGun){
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + (ofsetGun||0));
+  return d;
+}
+
+function asistanGunAdi(tarih){
+  return asistanGunSira[tarih.getDay()];
+}
+
+// Verilen tarihin, bir grubun SON kaydedilen döneminde hangi aya denk
+// geldiğini bulur (ay.baslangicTarihi/bitisTarihi aralığına göre).
+function asistanTarihinAyi(grup, tarih){
+  const donemler = (veri.dagitimlar && veri.dagitimlar[grup]) || [];
+  const sonDonem = donemler.length ? donemler[donemler.length-1] : null;
+  if(!sonDonem) return null;
+  const iso = tarih.toISOString().slice(0,10);
+  return (sonDonem.aylar||[]).find(ay=>ay.baslangicTarihi && ay.bitisTarihi && iso>=ay.baslangicTarihi && iso<=ay.bitisTarihi) || null;
+}
+
+function asistanAktifAy(grup){
+  const donemler = (veri.dagitimlar && veri.dagitimlar[grup]) || [];
+  const sonDonem = donemler.length ? donemler[donemler.length-1] : null;
+  if(!sonDonem || !sonDonem.aylar || !sonDonem.aylar.length) return null;
+  return sonDonem.aylar[varsayilanAyIdx(sonDonem.aylar)];
+}
+
+function asistanGrupBelirle(soru){
+  if(soru.includes('ÖĞLEN') || soru.includes('ÖĞLE')) return 'oglen';
+  if(soru.includes('SABAH')) return 'sabah';
+  return null;
+}
+
+function asistanYerBul(soru){
+  const yerler = veri.yerler || [];
+  return yerler.find(y=>soru.includes(asistanNormalize(y.ad)));
+}
+
+// Sorudaki metinde geçen bir öğretmen adını (her iki grupta da) arar.
+// Tam ad geçiyorsa onu, yoksa soyadı/parça eşleşen ilk kişiyi döner.
+function asistanOgretmenBul(soru){
+  const adaylar = [];
+  ['sabah','oglen'].forEach(grup=>{
+    ((veri.ogretmenler && veri.ogretmenler[grup]) || []).forEach(o=>{
+      const ad = asistanNormalize(o.ad);
+      if(soru.includes(ad)) adaylar.push({grup, id:o.id, ad:o.ad, uzunluk:ad.length});
+    });
+  });
+  if(!adaylar.length) return null;
+  adaylar.sort((a,b)=>b.uzunluk-a.uzunluk);
+  return adaylar[0];
+}
+
+function asistanOgretmenProgramCevap(kisi){
+  const ay = asistanAktifAy(kisi.grup);
+  if(!ay) return kisi.ad + ' için yayınlanmış bir program bulamadım.';
+  const bulunanlar = [];
+  (veri.yerler||[]).forEach(y=>{
+    GUNLER.forEach(g=>{
+      const ids = (ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][g]) || [];
+      if(ids.includes(kisi.id)) bulunanlar.push(g + ' — ' + y.ad);
+    });
+  });
+  const ayAdi = (ay.ayEtiket||'').replace(/\s*\d{4}$/, '');
+  if(!bulunanlar.length){
+    return kisi.ad + ', ' + ayAdi + ' döneminde nöbet listesinde görünmüyor (izinli/muaf olabilir).';
+  }
+  return kisi.ad + ' (' + GRUP_ETIKET[kisi.grup] + ') — ' + ayAdi + ' PROGRAMI:\n' + bulunanlar.map(b=>'• ' + b).join('\n');
+}
+
+function asistanGunSorgusuCevap(soru, ofset){
+  const grup = asistanGrupBelirle(soru) || aktifGrup;
+  const tarih = asistanBugun(ofset);
+  const gun = asistanGunAdi(tarih);
+  if(gun === 'CUMARTESİ' || gun === 'PAZAR'){
+    return (ofset ? 'Yarın' : 'Bugün') + ' hafta sonu, nöbet yazılmıyor.';
+  }
+  const ay = asistanTarihinAyi(grup, tarih);
+  if(!ay){
+    return (ofset ? 'Yarın' : 'Bugün') + ' için yayınlanmış bir program bulamadım (dönem dışında olabilir).';
+  }
+  const yer = asistanYerBul(soru);
+  const yerler = yer ? [yer] : (veri.yerler||[]);
+  const satirlar = yerler.map(y=>{
+    const ids = (ay.tablo && ay.tablo[y.id] && ay.tablo[y.id][gun]) || [];
+    const adlar = ids.map(id=>ogretmenAd(grup, id)).filter(Boolean);
+    return '• ' + y.ad + ': ' + (adlar.length ? adlar.join(', ') : '—');
+  });
+  return (ofset ? 'YARIN' : 'BUGÜN') + ' (' + gun + ', ' + GRUP_ETIKET[grup] + '):\n' + satirlar.join('\n');
+}
+
+function asistanYerProgramCevap(yer, soru){
+  const grup = asistanGrupBelirle(soru) || aktifGrup;
+  const ay = asistanAktifAy(grup);
+  if(!ay) return yer.ad + ' için yayınlanmış bir program bulamadım.';
+  const ayAdi = (ay.ayEtiket||'').replace(/\s*\d{4}$/, '');
+  const satirlar = GUNLER.map(g=>{
+    const ids = (ay.tablo && ay.tablo[yer.id] && ay.tablo[yer.id][g]) || [];
+    const adlar = ids.map(id=>ogretmenAd(grup, id)).filter(Boolean);
+    return '• ' + g + ': ' + (adlar.length ? adlar.join(', ') : '—');
+  });
+  return yer.ad + ' (' + GRUP_ETIKET[grup] + ') — ' + ayAdi + ':\n' + satirlar.join('\n');
+}
+
+function asistanIstatistikCevap(soru){
+  const grup = asistanGrupBelirle(soru) || aktifGrup;
+  const {list, donemSayisi} = hesaplaIstatistik(grup);
+  if(!donemSayisi || !list.length) return 'Bu grup için henüz istatistik oluşturacak yayınlanmış dönem yok.';
+  const sirali = list.slice().sort((a,b)=> soru.includes('AZ') ? a.total-b.total : b.total-a.total);
+  const ilk3 = sirali.slice(0,3).filter(s=>s.total>0 || sirali.length<=3);
+  const baslik = soru.includes('AZ') ? 'EN AZ NÖBET TUTANLAR' : 'EN ÇOK NÖBET TUTANLAR';
+  return baslik + ' (' + GRUP_ETIKET[grup] + ', ' + donemSayisi + ' dönem):\n' + ilk3.map((s,i)=>(i+1)+'. '+s.ad+' — '+s.total+' nöbet').join('\n');
+}
+
+function asistanCevapUret(soruRaw){
+  if(!veri || !veri.dagitimlar){
+    return 'Henüz yayınlanmış bir nöbet programı bulamadım.';
+  }
+  const soru = asistanNormalize(soruRaw);
+
+  if(soru.includes('MERHABA') || soru.includes('SELAM')){
+    return 'Merhaba! Nöbet programınızla ilgili aşağıdaki gibi sorular sorabilirsiniz:\n• "Bugün kim nöbetçi?"\n• "Ayşe Yılmaz ne zaman nöbetçi?"\n• "En çok nöbet tutan kim?"';
+  }
+
+  if(soru.includes('TEŞEKKÜR')){
+    return 'Rica ederim, başka bir sorunuz olursa buradayım. 🙂';
+  }
+
+  if(soru.includes('FİLTRE')){
+    return '"PROGRAM" görünümünde, ay seçiminin altındaki ÖĞRETMEN ve NÖBET YERİ kutularından seçim yaparak listeyi daraltabilirsiniz. "FİLTREYİ TEMİZLE" ile sıfırlayabilirsiniz.';
+  }
+  if(soru.includes('İSTATİSTİK') && (soru.includes('NEDİR') || soru.includes('NASIL'))){
+    return 'Üstteki "GÖRÜNÜM" bölümünden İSTATİSTİKLER\'e geçerek, yayınlanan tüm dönemler boyunca kimin kaç kez, hangi gün ve yerde nöbet tuttuğunu görebilirsiniz. Arama kutusuyla isim de arayabilirsiniz.';
+  }
+  if(soru.includes('AY SEÇ') || (soru.includes('DÖNEM') && soru.includes('NASIL'))){
+    return '"AY SEÇİN" açılır menüsünden, o dönemdeki farklı ayların programını görüntüleyebilirsiniz. Sayfa açıldığında otomatik olarak içinde bulunduğunuz ay seçili gelir.';
+  }
+  if(soru.includes('GÜNCELLE') || soru.includes('YENİLE') || soru.includes('SON YAYIN')){
+    return 'Sayfanın üst kısmındaki "YENİLE" butonuna basarak en güncel yayınlanan programı çekebilirsiniz. "SON YAYIN" yazısı, en son ne zaman güncellendiğini gösterir.';
+  }
+
+  // En çok / en az nöbet
+  if((soru.includes('EN ÇOK') || soru.includes('EN FAZLA') || soru.includes('EN AZ')) && soru.includes('NÖBET')){
+    return asistanIstatistikCevap(soru);
+  }
+
+  // Öğretmen adı geçiyor mu?
+  const kisi = asistanOgretmenBul(soru);
+  if(kisi){
+    return asistanOgretmenProgramCevap(kisi);
+  }
+
+  // Bugün / yarın
+  if(soru.includes('YARIN')){
+    return asistanGunSorgusuCevap(soru, 1);
+  }
+  if(soru.includes('BUGÜN')){
+    return asistanGunSorgusuCevap(soru, 0);
+  }
+
+  // Yer adı geçiyor mu? (BAHÇE, 1. KAT vb.)
+  const yer = asistanYerBul(soru);
+  if(yer){
+    return asistanYerProgramCevap(yer, soru);
+  }
+
+  if(soru.includes('KİM') || soru.includes('NÖBET')){
+    return 'Tam olarak anlayamadım. Bir öğretmen adı, bir nöbet yeri adı ya da "bugün/yarın kim nöbetçi" gibi sorabilirsiniz. Örnekler için aşağıdaki önerilere göz atabilirsiniz.';
+  }
+
+  return 'Bunu tam olarak anlayamadım 🙂 Aşağıdaki örnek sorulardan birini deneyebilir, ya da bir öğretmen adı veya nöbet yeri adı yazabilirsiniz.';
+}
+
+function asistanOneriler(){
+  return ['Bugün kim nöbetçi?','Yarın kim nöbetçi?','En çok nöbet tutan kim?','İstatistikler nasıl çalışır?'];
+}
+
+function asistanMesajEkle(tip, metin){
+  const body = document.getElementById('asistanBody');
+  if(!body) return;
+  const div = document.createElement('div');
+  div.className = 'asistan-msg ' + tip;
+  const bubble = document.createElement('div');
+  bubble.className = 'asistan-bubble';
+  bubble.textContent = metin;
+  div.appendChild(bubble);
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+}
+
+function asistanChipleriEkle(){
+  const body = document.getElementById('asistanBody');
+  if(!body) return;
+  const eskiler = body.querySelectorAll('.asistan-chips');
+  eskiler.forEach(e=>e.remove());
+  const wrap = document.createElement('div');
+  wrap.className = 'asistan-chips';
+  asistanOneriler().forEach(soru=>{
+    const b = document.createElement('button');
+    b.className = 'asistan-chip';
+    b.textContent = soru;
+    b.onclick = ()=> asistanSoruGonder(soru);
+    wrap.appendChild(b);
+  });
+  body.appendChild(wrap);
+  body.scrollTop = body.scrollHeight;
+}
+
+function asistanSoruGonder(soru){
+  const metin = (soru||'').trim();
+  if(!metin) return;
+  asistanMesajEkle('user', metin);
+  const input = document.getElementById('asistanInput');
+  if(input) input.value = '';
+  setTimeout(()=>{
+    const cevap = asistanCevapUret(metin);
+    asistanMesajEkle('bot', cevap);
+    asistanChipleriEkle();
+  }, 250);
+}
+
+function asistanAc(otomatikMi){
+  asistanAcikMi = true;
+  const panel = document.getElementById('asistanPanel');
+  const backdrop = document.getElementById('asistanBackdrop');
+  if(panel) panel.classList.add('acik');
+  if(backdrop) backdrop.classList.add('acik');
+  const body = document.getElementById('asistanBody');
+  if(body && !body.dataset.baslatildi){
+    body.dataset.baslatildi = '1';
+    asistanMesajEkle('bot', 'Merhaba! Ben nöbet programı asistanınızım. Size nasıl yardımcı olabilirim?');
+    asistanChipleriEkle();
+  }
+  if(!otomatikMi){
+    const input = document.getElementById('asistanInput');
+    if(input) setTimeout(()=>input.focus(), 200);
+  }
+}
+
+function asistanKapat(){
+  asistanAcikMi = false;
+  const panel = document.getElementById('asistanPanel');
+  const backdrop = document.getElementById('asistanBackdrop');
+  if(panel) panel.classList.remove('acik');
+  if(backdrop) backdrop.classList.remove('acik');
+}
+
+document.getElementById('asistanFab').onclick = ()=> asistanAcikMi ? asistanKapat() : asistanAc(false);
+document.getElementById('asistanClose').onclick = asistanKapat;
+document.getElementById('asistanBackdrop').onclick = asistanKapat;
+document.getElementById('asistanGonder').onclick = ()=> asistanSoruGonder(document.getElementById('asistanInput').value);
+document.getElementById('asistanInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') asistanSoruGonder(document.getElementById('asistanInput').value);
+});
 
 yukle();
 </script>
