@@ -109,7 +109,7 @@ function renderAyTablosu(ay, grup, siraNo){
 
   return `
   <div class="card">
-    <h2>${esc(ay.ayEtiket || '')} PROGRAMI${tarihAraligi ? ' (' + tarihAraligi + ')' : ''}</h2>
+    <h2>${esc((ay.ayEtiket || '').replace(/\s*\d{4}$/, ''))} PROGRAMI${tarihAraligi ? ' (' + tarihAraligi + ')' : ''}</h2>
     <div class="table-scroll">
     <table class="data">
       <tr><th>NÖBET YERİ</th>${GUNLER.map(g=>`<th>${g}</th>`).join('')}</tr>
