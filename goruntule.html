@@ -142,6 +142,52 @@ table.data td.stat-num-cell.stat-low{color:#8A5D14;}
   .desktop-table{display:block;}
   .mobile-cards{display:none;}
 }
+
+/* ---- Çizelge Görüntüle / Yazdır (yöneticideki "ÇİZELGE FİLTRELE VE YAZDIR" ile aynı tablo) ---- */
+.table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;}
+.btn-print{width:100%;margin-top:10px;border:none;background:var(--navy);color:#fff;font-weight:800;font-size:13px;padding:12px 14px;border-radius:9px;cursor:pointer;}
+.schedule-header-wrap{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap;text-align:center;}
+.schedule-header-logo-box{width:56px;height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.schedule-header-logo{max-width:100%;max-height:100%;object-fit:contain;}
+.schedule-header-placeholder{width:56px;flex-shrink:0;}
+.schedule-title{text-align:center;flex:1;min-width:160px;}
+.schedule-title h2{display:block;margin:2px 0;color:var(--navy);font-size:13.5px;font-weight:800;}
+.schedule-title .period{font-size:11.5px;color:var(--text);font-weight:800;margin-top:5px;}
+.schedule-title .period.period-tarih{display:inline-block;background:var(--navy-soft);padding:3px 12px;border-radius:12px;}
+table.schedule{width:100%;border-collapse:collapse;table-layout:fixed;min-width:520px;}
+table.schedule th,table.schedule td{border:1px solid #1D2430;padding:7px 5px;font-size:11px;text-align:center;vertical-align:middle;}
+table.schedule th{background:var(--navy-soft);font-weight:800;color:var(--navy);font-size:11.5px;}
+table.schedule td.yer{background:#F8F9FB;font-weight:800;color:var(--navy);font-size:11px;}
+.notes{font-size:10px;color:#1D2430;margin-top:14px;}
+.notes p{margin:3px 0;}
+@media (min-width: 640px){
+  .schedule-title h2{font-size:16px;}
+  .schedule-title .period{font-size:13.5px;}
+  table.schedule th,table.schedule td{font-size:12.5px;padding:8px 6px;}
+  .view-toggle{max-width:420px;}
+}
+
+@media print{
+  @page{ size: landscape; margin: 12mm; }
+  .no-print, #asistanFab, .asistan-backdrop, .asistan-panel{ display:none !important; }
+  body{ background:#fff !important; color:#000 !important; font-size:11pt; text-transform:uppercase; margin:0; padding:0; font-family:Arial,"Segoe UI",sans-serif; }
+  .wrap{ max-width:100% !important; padding:0 !important; margin:0 !important; }
+  .card{ border:none !important; box-shadow:none !important; padding:0 !important; margin-bottom:0 !important; background:transparent !important; }
+  .table-scroll{ overflow:visible !important; width:100% !important; border:none !important; }
+  .schedule-header-wrap{ margin-bottom:20px !important; display:flex !important; flex-wrap:nowrap !important; align-items:center !important; justify-content:space-between !important; text-align:center !important; }
+  .schedule-header-logo-box{ width:90px !important; height:90px !important; }
+  .schedule-header-logo{ max-width:80px !important; max-height:80px !important; }
+  .schedule-title h2{ display:block !important; font-size:18px !important; color:#000 !important; margin:2px 0 !important; font-weight:800 !important; }
+  .schedule-title .period{ font-size:15px !important; color:#000 !important; font-weight:800 !important; margin-top:4px !important; }
+  .schedule-title .period.period-tarih{ background:#E7EEFB !important; padding:3px 16px !important; border-radius:10px !important; display:inline-block !important; }
+  table.schedule{ width:94% !important; margin:8px auto 0 !important; border-collapse:collapse !important; table-layout:fixed !important; min-width:0 !important; }
+  table.schedule th, table.schedule td{ border:1.5px solid #000 !important; padding:6px 4px !important; font-size:11.5px !important; color:#000 !important; text-align:center !important; }
+  table.schedule th{ background:#f0f0f0 !important; font-size:12.5px !important; font-weight:800 !important; }
+  table.schedule td.yer{ font-weight:800 !important; background:#fafafa !important; font-size:12px !important; }
+  .notes{ font-size:10.5px !important; color:#000 !important; margin-top:18px !important; line-height:1.4; }
+  .page-break{ page-break-after:always !important; break-after:page !important; }
+}
 </style>
 </head>
 <body>
@@ -183,16 +229,27 @@ const fbDb = firebase.database();
 
 const GUNLER = ['PAZARTESİ','SALI','ÇARŞAMBA','PERŞEMBE','CUMA'];
 const GRUP_ETIKET = {sabah:'SABAHÇI GRUBU', oglen:'ÖĞLENCİ GRUBU'};
+const GRUP_KISALTMA = {sabah:'SABAH', oglen:'ÖĞLE'};
 
 let veri = null;
 let aktifGrup = 'sabah';
 let aktifAyIdx = 0;
 let filtreYer = '';
 let filtreOgretmen = '';
-let gorunum = 'program'; // 'program' | 'istatistik'
+let gorunum = 'program'; // 'program' | 'istatistik' | 'yazdir'
 let istatistikArama = '';
 
+// "YAZDIR" görünümü için ayrı filtre durumu (ay/yer/öğretmen bazlı yazdırma)
+let yazdirAy = 'TUMU';
+let yazdirYer = '';
+let yazdirOgretmen = '';
+
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c])); }
+
+function toUpperTr(str){
+  if(!str) return '';
+  return String(str).replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase();
+}
 
 function formatTarih(iso){
   if(!iso) return '';
@@ -394,6 +451,108 @@ function renderIstatistikIcerik(grup){
     </div>`;
 }
 
+// Bir grubun TÜM yayınlanmış dönemlerindeki ayları (tekrarsız) toplar —
+// "yıl bazlı" yazdırmada kullanılır; yöneticideki allMonthsFor() ile aynı mantık.
+function allMonthsForYazdir(grup){
+  const map = {};
+  ((veri.dagitimlar && veri.dagitimlar[grup]) || []).forEach(batch=>{
+    (batch.aylar || []).forEach(ay=>{ map[ay.ay] = ay; });
+  });
+  return Object.values(map).sort((a,b)=>a.ay.localeCompare(b.ay));
+}
+
+// Yöneticideki "ÇİZELGE FİLTRELE VE YAZDIR" ekranıyla birebir aynı kart/tablo
+// düzenini üretir; öğretmenler ay bazlı, yıl bazlı (TÜMÜ) veya yalnızca kendi
+// nöbetlerini (ÖĞRETMEN filtresiyle) yazdırabilir.
+function renderYazdirIcerik(grup){
+  const kurum = veri.kurum || {};
+  const yerler = veri.yerler || [];
+  const ogretmenler = (veri.ogretmenler && veri.ogretmenler[grup]) || [];
+  const aylar = allMonthsForYazdir(grup);
+
+  if(!aylar.length){
+    return '<div class="msg">BU GRUP İÇİN HENÜZ YAYINLANMIŞ BİR PROGRAM YOK.</div>';
+  }
+
+  if(yazdirAy !== 'TUMU' && !aylar.some(a=>a.ay===yazdirAy)) yazdirAy = 'TUMU';
+  if(yazdirYer && !yerler.some(y=>y.id===yazdirYer)) yazdirYer = '';
+  if(yazdirOgretmen && !ogretmenler.some(o=>o.id===yazdirOgretmen)) yazdirOgretmen = '';
+
+  const ayOptions = `<option value="TUMU" ${yazdirAy==='TUMU'?'selected':''}>TÜMÜ (TÜM YIL)</option>` +
+    aylar.map(a=>`<option value="${a.ay}" ${yazdirAy===a.ay?'selected':''}>${esc(a.ayEtiket)}</option>`).join('');
+  const yerOptions = `<option value="">TÜM YERLER</option>` +
+    yerler.map(y=>`<option value="${y.id}" ${yazdirYer===y.id?'selected':''}>${esc(y.ad)}</option>`).join('');
+  const ogrOptions = `<option value="">TÜM ÖĞRETMENLER</option>` +
+    ogretmenler.map(o=>`<option value="${o.id}" ${yazdirOgretmen===o.id?'selected':''}>${esc(o.ad)}</option>`).join('');
+
+  const secilenAylar = yazdirAy === 'TUMU' ? aylar : [aylar.find(a=>a.ay===yazdirAy) || aylar[0]];
+
+  const notSatirlari = (kurum.notlar||'').split('\n').filter(l=>l.trim()).map((l,i)=>`<p>${i+1}. ${esc(l)}</p>`).join('');
+
+  const renderSinglePrintCard = (ayItem, isLast) => {
+    const yerListesi = yazdirYer ? yerler.filter(y=>y.id===yazdirYer) : yerler;
+    const rows = yerListesi.map(y=>{
+      const cells = GUNLER.map(g=>{
+        let ids = (ayItem.tablo && ayItem.tablo[y.id] && ayItem.tablo[y.id][g]) || [];
+        if(yazdirOgretmen) ids = ids.filter(id=>id===yazdirOgretmen);
+        return `<td>${renderHucre(ids, grup)}</td>`;
+      }).join('');
+      return `<tr><td class="yer">${esc(y.ad)}</td>${cells}</tr>`;
+    }).join('');
+
+    const tarihGosterim = (ayItem.baslangicTarihi && ayItem.bitisTarihi)
+      ? (formatDateTR(ayItem.baslangicTarihi) + ' &ndash; ' + formatDateTR(ayItem.bitisTarihi))
+      : ayItem.ayEtiket;
+
+    const logoHtml = kurum.logo ? `<div class="schedule-header-logo-box"><img class="schedule-header-logo" src="${kurum.logo}" alt="Logo"></div>` : '<div class="schedule-header-placeholder"></div>';
+
+    return `
+    <div class="card ${!isLast ? 'page-break' : ''}">
+      <div class="schedule-header-wrap">
+        ${logoHtml}
+        <div class="schedule-title">
+          <h2>${esc(toUpperTr(kurum.ad))}</h2>
+          <h2>${esc(toUpperTr(kurum.altBaslik))}</h2>
+          <div class="period period-tarih">${tarihGosterim}</div>
+          <div class="period" style="font-size:12px;margin-top:6px;">${GRUP_KISALTMA[grup]}</div>
+        </div>
+        <div class="schedule-header-placeholder"></div>
+      </div>
+      <div class="table-scroll">
+      <table class="schedule">
+        <tr><th style="width:15%;">NÖBET YERİ</th>${GUNLER.map(g=>`<th style="width:17%;">${g}</th>`).join('')}</tr>
+        ${rows}
+      </table>
+      </div>
+      <div class="notes">${notSatirlari}</div>
+    </div>`;
+  };
+
+  const scheduleCardsHtml = secilenAylar.map((aItem, index) => renderSinglePrintCard(aItem, index === secilenAylar.length - 1)).join('');
+
+  return `
+  <div class="panel no-print">
+    <div class="field">
+      <label>DÖNEM / AY SEÇİN</label>
+      <select id="yazdirAySel" class="ay-select">${ayOptions}</select>
+    </div>
+    <div class="field filter-row">
+      <div class="field">
+        <label>ÖĞRETMEN (SADECE KENDİ NÖBETİNİZİ YAZDIRMAK İÇİN SEÇİN)</label>
+        <select id="yazdirOgrSel">${ogrOptions}</select>
+      </div>
+      <div class="field">
+        <label>NÖBET YERİ</label>
+        <select id="yazdirYerSel">${yerOptions}</select>
+      </div>
+    </div>
+    <button class="btn-print" id="btnYazdirBas">🖨️ YAZDIR / PDF AL</button>
+  </div>
+  <div id="printArea">
+    ${scheduleCardsHtml}
+  </div>`;
+}
+
 function render(){
   const app = document.getElementById('app');
   if(!veri || !veri.dagitimlar){
@@ -429,7 +588,29 @@ function render(){
     <div class="view-toggle">
       <button data-view="program" class="${gorunum==='program'?'active':''}">📋 PROGRAM</button>
       <button data-view="istatistik" class="${gorunum==='istatistik'?'active':''}">📊 İSTATİSTİKLER</button>
+      <button data-view="yazdir" class="${gorunum==='yazdir'?'active':''}">🖨️ YAZDIR</button>
     </div>`;
+
+  if(gorunum==='yazdir'){
+    app.innerHTML = `<div class="no-print">${headerHtml}${guncellemeHtml}${tabsHtml}${viewTabsHtml}</div>` + renderYazdirIcerik(aktifGrup);
+    document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+      aktifGrup = b.dataset.grup;
+      yazdirAy = 'TUMU'; yazdirYer = ''; yazdirOgretmen = '';
+      render();
+    });
+    document.querySelectorAll('.view-toggle button').forEach(b=>b.onclick=()=>{ gorunum=b.dataset.view; render(); });
+    const bY = document.getElementById('btnYenile'); if(bY) bY.onclick = yukle;
+
+    const yAySel = document.getElementById('yazdirAySel');
+    if(yAySel) yAySel.onchange = ()=>{ yazdirAy = yAySel.value; render(); };
+    const yOgrSel = document.getElementById('yazdirOgrSel');
+    if(yOgrSel) yOgrSel.onchange = ()=>{ yazdirOgretmen = yOgrSel.value; render(); };
+    const yYerSel = document.getElementById('yazdirYerSel');
+    if(yYerSel) yYerSel.onchange = ()=>{ yazdirYer = yYerSel.value; render(); };
+    const bYazdirBas = document.getElementById('btnYazdirBas');
+    if(bYazdirBas) bYazdirBas.onclick = ()=>window.print();
+    return;
+  }
 
   if(gorunum==='istatistik'){
     app.innerHTML = headerHtml + guncellemeHtml + tabsHtml + viewTabsHtml + renderIstatistikIcerik(aktifGrup);
