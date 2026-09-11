@@ -143,28 +143,33 @@ table.data td.stat-num-cell.stat-low{color:#8A5D14;}
   .mobile-cards{display:none;}
 }
 
-/* ---- Çizelge Görüntüle / Yazdır (yöneticideki "ÇİZELGE FİLTRELE VE YAZDIR" ile aynı tablo) ---- */
+/* ---- Çizelge Görüntüle / Yazdır (yöneticideki "ÇİZELGE FİLTRELE VE YAZDIR" ile aynı tablo) ----
+   Ekranda gerçek bir yazdırma önizlemesi gibi görünmesi için her çizelge sayfası
+   sabit (yatay/landscape) genişlikte çizilir, sonra JS ile ekran genişliğine göre
+   ölçeklenip küçültülür — böylece tablo kesilmez, sütunlar kaymaz, kaydırma gerekmez. */
+.yazdir-preview-wrap{background:#DEE3EC;border-radius:14px;padding:14px 10px 16px;margin-top:2px;}
+.yazdir-preview-hint{font-size:10px;font-weight:800;color:var(--muted);text-align:center;margin-bottom:12px;letter-spacing:.2px;line-height:1.4;}
+.yazdir-page-outer{width:100%;overflow:hidden;margin:0 auto 16px;border-radius:8px;}
+.yazdir-page-outer:last-child{margin-bottom:0;}
+.yazdir-page{width:1000px;background:#fff;border-radius:8px;box-shadow:0 3px 16px rgba(20,25,40,.20);padding:26px 30px;transform-origin:top left;}
 .table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;}
 .btn-print{width:100%;margin-top:10px;border:none;background:var(--navy);color:#fff;font-weight:800;font-size:13px;padding:12px 14px;border-radius:9px;cursor:pointer;}
-.schedule-header-wrap{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap;text-align:center;}
-.schedule-header-logo-box{width:56px;height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-.schedule-header-logo{max-width:100%;max-height:100%;object-fit:contain;}
-.schedule-header-placeholder{width:56px;flex-shrink:0;}
-.schedule-title{text-align:center;flex:1;min-width:160px;}
-.schedule-title h2{display:block;margin:2px 0;color:var(--navy);font-size:13.5px;font-weight:800;}
-.schedule-title .period{font-size:11.5px;color:var(--text);font-weight:800;margin-top:5px;}
-.schedule-title .period.period-tarih{display:inline-block;background:var(--navy-soft);padding:3px 12px;border-radius:12px;}
-table.schedule{width:100%;border-collapse:collapse;table-layout:fixed;min-width:520px;}
-table.schedule th,table.schedule td{border:1px solid #1D2430;padding:7px 5px;font-size:11px;text-align:center;vertical-align:middle;}
-table.schedule th{background:var(--navy-soft);font-weight:800;color:var(--navy);font-size:11.5px;}
-table.schedule td.yer{background:#F8F9FB;font-weight:800;color:var(--navy);font-size:11px;}
-.notes{font-size:10px;color:#1D2430;margin-top:14px;}
-.notes p{margin:3px 0;}
+.schedule-header-wrap{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:10px;flex-wrap:nowrap;text-align:center;}
+.schedule-header-logo-box{width:90px;height:90px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.schedule-header-logo{max-width:82px;max-height:82px;object-fit:contain;}
+.schedule-header-placeholder{width:90px;flex-shrink:0;}
+.schedule-title{text-align:center;flex:1;}
+.schedule-title h2{display:block;margin:2px 0;color:var(--navy);font-size:18px;font-weight:800;letter-spacing:.3px;}
+.schedule-title .period{font-size:15px;color:var(--text);font-weight:800;margin-top:6px;}
+.schedule-title .period.period-tarih{display:inline-block;background:var(--navy-soft);padding:4px 16px;border-radius:14px;}
+table.schedule{width:100%;border-collapse:collapse;table-layout:fixed;}
+table.schedule th,table.schedule td{border:1px solid #1D2430;padding:8px 6px;font-size:12.5px;text-align:center;vertical-align:middle;}
+table.schedule th{background:var(--navy-soft);font-weight:800;color:var(--navy);font-size:13px;}
+table.schedule td.yer{background:#F8F9FB;font-weight:800;color:var(--navy);font-size:12.5px;}
+.notes{font-size:11px;color:#1D2430;margin-top:20px;}
+.notes p{margin:4px 0;}
 @media (min-width: 640px){
-  .schedule-title h2{font-size:16px;}
-  .schedule-title .period{font-size:13.5px;}
-  table.schedule th,table.schedule td{font-size:12.5px;padding:8px 6px;}
   .view-toggle{max-width:420px;}
 }
 
@@ -173,6 +178,9 @@ table.schedule td.yer{background:#F8F9FB;font-weight:800;color:var(--navy);font-
   .no-print, #asistanFab, .asistan-backdrop, .asistan-panel{ display:none !important; }
   body{ background:#fff !important; color:#000 !important; font-size:11pt; text-transform:uppercase; margin:0; padding:0; font-family:Arial,"Segoe UI",sans-serif; }
   .wrap{ max-width:100% !important; padding:0 !important; margin:0 !important; }
+  .yazdir-preview-wrap{ background:transparent !important; padding:0 !important; border-radius:0 !important; }
+  .yazdir-page-outer{ width:auto !important; height:auto !important; overflow:visible !important; margin:0 !important; border-radius:0 !important; }
+  .yazdir-page{ width:auto !important; transform:none !important; box-shadow:none !important; border-radius:0 !important; }
   .card{ border:none !important; box-shadow:none !important; padding:0 !important; margin-bottom:0 !important; background:transparent !important; }
   .table-scroll{ overflow:visible !important; width:100% !important; border:none !important; }
   .schedule-header-wrap{ margin-bottom:20px !important; display:flex !important; flex-wrap:nowrap !important; align-items:center !important; justify-content:space-between !important; text-align:center !important; }
@@ -507,7 +515,8 @@ function renderYazdirIcerik(grup){
     const logoHtml = kurum.logo ? `<div class="schedule-header-logo-box"><img class="schedule-header-logo" src="${kurum.logo}" alt="Logo"></div>` : '<div class="schedule-header-placeholder"></div>';
 
     return `
-    <div class="card ${!isLast ? 'page-break' : ''}">
+    <div class="yazdir-page-outer">
+    <div class="card yazdir-page ${!isLast ? 'page-break' : ''}">
       <div class="schedule-header-wrap">
         ${logoHtml}
         <div class="schedule-title">
@@ -525,6 +534,7 @@ function renderYazdirIcerik(grup){
       </table>
       </div>
       <div class="notes">${notSatirlari}</div>
+    </div>
     </div>`;
   };
 
@@ -548,10 +558,33 @@ function renderYazdirIcerik(grup){
     </div>
     <button class="btn-print" id="btnYazdirBas">🖨️ YAZDIR / PDF AL</button>
   </div>
-  <div id="printArea">
+  <div class="yazdir-preview-wrap" id="printArea">
+    <div class="yazdir-preview-hint no-print">ÖNİZLEME — ÇIKTI YATAY (A4 LANDSCAPE) SAYFA OLARAK ALINACAKTIR</div>
     ${scheduleCardsHtml}
   </div>`;
 }
+
+// Yazdırma önizleme sayfalarını (sabit 1000px genişlikteki .yazdir-page) ekran
+// genişliğine göre ölçekleyip küçültür — kaydırma/gizlenme olmadan tüm sütunlar görünür.
+function scaleYazdirPages(){
+  document.querySelectorAll('.yazdir-page-outer').forEach(outer=>{
+    const page = outer.querySelector('.yazdir-page');
+    if(!page) return;
+    page.style.transform = 'none';
+    const wrapWidth = outer.clientWidth;
+    const pageWidth = page.offsetWidth || 1000;
+    const pageHeight = page.offsetHeight;
+    const scale = wrapWidth > 0 ? Math.min(1, wrapWidth / pageWidth) : 1;
+    page.style.transform = 'scale(' + scale + ')';
+    outer.style.height = Math.round(pageHeight * scale) + 'px';
+  });
+}
+let yazdirRescaleTimer = null;
+window.addEventListener('resize', ()=>{
+  if(gorunum !== 'yazdir') return;
+  clearTimeout(yazdirRescaleTimer);
+  yazdirRescaleTimer = setTimeout(scaleYazdirPages, 150);
+});
 
 function render(){
   const app = document.getElementById('app');
@@ -609,6 +642,7 @@ function render(){
     if(yYerSel) yYerSel.onchange = ()=>{ yazdirYer = yYerSel.value; render(); };
     const bYazdirBas = document.getElementById('btnYazdirBas');
     if(bYazdirBas) bYazdirBas.onclick = ()=>window.print();
+    requestAnimationFrame(scaleYazdirPages);
     return;
   }
 
