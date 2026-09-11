@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root{
   --navy:#1B2A4A; --navy-soft:#EAF0F9; --gold:#C9A227; --gold-soft:#FBF1D8;
@@ -156,6 +157,8 @@ table.data td.stat-num-cell.stat-low{color:#8A5D14;}
 .table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;}
 .btn-print{width:100%;margin-top:10px;border:none;background:var(--navy);color:#fff;font-weight:800;font-size:13px;padding:12px 14px;border-radius:9px;cursor:pointer;}
+.btn-jpg{width:100%;margin-top:8px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);font-weight:800;font-size:13px;padding:11px 14px;border-radius:9px;cursor:pointer;}
+.btn-jpg:disabled, .btn-print:disabled{opacity:.55;cursor:default;}
 .schedule-header-wrap{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:10px;flex-wrap:nowrap;text-align:center;}
 .schedule-header-logo-box{width:90px;height:90px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .schedule-header-logo{max-width:82px;max-height:82px;object-fit:contain;}
@@ -558,6 +561,7 @@ function renderYazdirIcerik(grup){
       </div>
     </div>
     <button class="btn-print" id="btnYazdirBas">🖨️ YAZDIR / PDF AL</button>
+    <button class="btn-jpg" id="btnJpgIndir">📷 JPG OLARAK İNDİR</button>
   </div>
   <div class="yazdir-preview-wrap" id="printArea">
     <div class="yazdir-preview-hint no-print">ÖNİZLEME — ÇIKTI YATAY (A4 LANDSCAPE) SAYFA OLARAK ALINACAKTIR</div>
@@ -586,6 +590,57 @@ window.addEventListener('resize', ()=>{
   clearTimeout(yazdirRescaleTimer);
   yazdirRescaleTimer = setTimeout(scaleYazdirPages, 150);
 });
+
+// Önizlemedeki her çizelge sayfasını (ay filtresine göre 1 veya daha
+// fazla olabilir) ekrandaki küçültülmüş haliyle DEĞİL, gerçek/tam
+// boyutuyla yakalayıp yüksek çözünürlüklü bir JPG olarak indirir —
+// telefonda galeriye kaydedip WhatsApp'tan paylaşmak PDF'ten daha kolay.
+async function indirJPG(){
+  const btn = document.getElementById('btnJpgIndir');
+  if(!btn || btn.disabled) return;
+  const eskiMetin = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'HAZIRLANIYOR…';
+
+  const sayfalar = Array.from(document.querySelectorAll('.yazdir-page'));
+  try{
+    for(let i=0; i<sayfalar.length; i++){
+      const page = sayfalar[i];
+      const outer = page.parentElement;
+      const eskiTransform = page.style.transform;
+      const eskiOuterHeight = outer.style.height;
+      const eskiOuterOverflow = outer.style.overflow;
+
+      // Önizleme için uygulanan küçültme ölçeğini geçici olarak kaldır —
+      // aksi halde görsel, ekrandaki kadar küçük ve bulanık çıkar.
+      page.style.transform = 'none';
+      outer.style.overflow = 'visible';
+      outer.style.height = 'auto';
+
+      try{
+        const canvas = await html2canvas(page, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+        const etiketKaynak = page.querySelector('.period-tarih');
+        const etiket = (etiketKaynak ? etiketKaynak.textContent : ('sayfa-' + (i + 1)))
+          .trim().replace(/\s+/g, '_').replace(/[^\w.-]+/g, '');
+        const link = document.createElement('a');
+        link.download = 'Nobet_Cizelgesi_' + etiket + (sayfalar.length > 1 ? ('_' + (i + 1)) : '') + '.jpg';
+        link.href = canvas.toDataURL('image/jpeg', 0.92);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } finally {
+        page.style.transform = eskiTransform;
+        outer.style.overflow = eskiOuterOverflow;
+        outer.style.height = eskiOuterHeight;
+      }
+    }
+  } catch(e){
+    alert('GÖRSEL OLUŞTURULURKEN BİR SORUN OLUŞTU: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = eskiMetin;
+  }
+}
 
 function render(){
   const app = document.getElementById('app');
@@ -643,6 +698,8 @@ function render(){
     if(yYerSel) yYerSel.onchange = ()=>{ yazdirYer = yYerSel.value; render(); };
     const bYazdirBas = document.getElementById('btnYazdirBas');
     if(bYazdirBas) bYazdirBas.onclick = ()=>window.print();
+    const bJpgIndir = document.getElementById('btnJpgIndir');
+    if(bJpgIndir) bJpgIndir.onclick = indirJPG;
     requestAnimationFrame(scaleYazdirPages);
     return;
   }
