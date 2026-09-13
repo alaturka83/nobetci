@@ -985,21 +985,51 @@ async function loadState(){
 }
 
 
+// En son saveState() çağrısının bitmemiş olabilecek Firebase yazma işlemini
+// tutar. ÇIKIŞ YAP gibi sayfayı hemen yenileyen işlemler, veri kaybolmasın
+// diye bu işlemin bitmesini bekler (bkz. nbCikisYap()).
+let sonKayitPromise = null;
+let kayitBekleniyorMu = false;
+window.addEventListener('beforeunload', function(e){
+  if(kayitBekleniyorMu){
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
 async function saveState(){
   try{
     await idbSet(IDB_KEY, state);
   }catch(e){}
   const el = document.getElementById('saveStatus');
+  // Firebase Realtime Database, JS nesnesinde "undefined" değer görürse
+  // YAZMAYI TAMAMEN REDDEDER (sessizce değil, hata fırlatarak) — bir yerde
+  // unutulmuş tek bir "undefined" bile TÜM state'in kaydedilmesini
+  // engelleyebilir. JSON üzerinden bir gidiş-dönüş yaparak (undefined alanlar
+  // JSON.stringify sırasında otomatik elenir) bunu güvenceye alıyoruz.
+  let temizState;
   try{
-    await fbDb.ref(FB_YONETIM_REF).set(state);
-    if(el) el.textContent = 'KAYDEDİLDİ ✓ (ÇEVRİMİÇİ)';
+    temizState = JSON.parse(JSON.stringify(state));
   }catch(e){
+    if(el) el.textContent = 'KAYIT HATASI: VERİ FORMATI BOZUK GÖRÜNÜYOR (' + e.message + ').';
+    console.error('saveState: state JSON\'a çevrilemedi', e, state);
+    return;
+  }
+  const p = fbDb.ref(FB_YONETIM_REF).set(temizState).then(()=>{
+    if(el) el.textContent = 'KAYDEDİLDİ ✓ (ÇEVRİMİÇİ)';
+  }).catch((e)=>{
+    console.error('saveState: Firebase\'e yazılamadı', e);
     const isQuota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
     const msg = isQuota
       ? 'KAYIT HATASI: DEPOLAMA ALANI DOLU! YEDEKLEYİP ESKİ DÖNEMLERİ SİLMEYİ DENEYİN.'
-      : 'ÇEVRİMİÇİ KAYDEDİLEMEDİ! (İNTERNET BAĞLANTINIZI KONTROL EDİN) — DEĞİŞİKLİK ŞİMDİLİK SADECE BU CİHAZDA.';
+      : 'ÇEVRİMİÇİ KAYDEDİLEMEDİ! (' + (e && e.message ? e.message : 'BİLİNMEYEN HATA') + ') — DEĞİŞİKLİK ŞİMDİLİK SADECE BU CİHAZDA.';
     if(el) el.textContent = msg;
-  }
+  }).finally(()=>{
+    kayitBekleniyorMu = false;
+  });
+  kayitBekleniyorMu = true;
+  sonKayitPromise = p;
+  await p;
 }
 // Sekme/pencere kapatılırken (veya arka plana alınırken) son durumu bir kez
 // daha diske yazar. saveState() her işlemden sonra zaten çağrılıyor olsa da,
@@ -5431,8 +5461,15 @@ let nbRole = (function(){
 })();
 
 function nbCikisYap(){
-  try{ localStorage.removeItem('nb_role'); }catch(e){}
-  location.reload();
+  // Az önce yapılmış bir değişikliğin Firebase'e yazılması bitmeden sayfa
+  // yenilenip veri kaybolmasın diye, varsa bekleyen kaydın bitmesini
+  // bekliyoruz (en fazla ~4 saniye; daha uzun sürerse yine de çıkış yapılır).
+  const bekleyen = (typeof sonKayitPromise !== 'undefined' && sonKayitPromise) ? sonKayitPromise : Promise.resolve();
+  const zamanAsimi = new Promise(r=>setTimeout(r, 4000));
+  Promise.race([bekleyen.catch(()=>{}), zamanAsimi]).then(()=>{
+    try{ localStorage.removeItem('nb_role'); }catch(e){}
+    location.reload();
+  });
 }
 
 window.onload = function(){
