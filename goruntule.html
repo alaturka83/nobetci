@@ -5453,7 +5453,7 @@ if(tmGirisForm) tmGirisForm.onsubmit = (e)=>{
   tmSifreDogrula(sifre).then(dogruMu=>{
     if(dogruMu){
       try{ localStorage.setItem('nb_role', 'admin'); }catch(e){}
-      location.reload();
+      nbTazeYenile();
     } else {
       const hata = document.getElementById('tmGirisHata');
       if(hata) hata.style.display = 'block';
@@ -5478,6 +5478,17 @@ yukle();
  * bakılarak belirlenir; sayfa her açıldığında/roldeğiştiğinde TEK bir
  * mod için gerekli HTML kökü DOM'da bırakılır, diğeri tamamen kaldırılır.
  * ============================================================== */
+function nbTazeYenile(){
+  // DİKKAT: Bilerek location.reload() KULLANMIYORUZ — bazı tarayıcılar
+  // (özellikle telefonlarda) normal bir yenilemeyi hâlâ önbellekten
+  // (eski/güncellenmemiş bir kopyadan) karşılayabiliyor. Adrese her seferinde
+  // FARKLI bir sorgu parametresi (?t=...) ekleyerek, tarayıcının bunu HİÇ
+  // görmediği YENİ bir adres sanıp sunucudan gerçekten taze bir kopya
+  // indirmesini garantiliyoruz.
+  const temelUrl = location.href.split('#')[0].split('?')[0];
+  location.href = temelUrl + '?t=' + Date.now();
+}
+
 let nbRole = (function(){
   try { return localStorage.getItem('nb_role') === 'admin' ? 'admin' : 'teacher'; }
   catch(e){ return 'teacher'; }
@@ -5491,7 +5502,7 @@ function nbCikisYap(){
   const zamanAsimi = new Promise(r=>setTimeout(r, 4000));
   Promise.race([bekleyen.catch(()=>{}), zamanAsimi]).then(()=>{
     try{ localStorage.removeItem('nb_role'); }catch(e){}
-    location.reload();
+    nbTazeYenile();
   });
 }
 
