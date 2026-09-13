@@ -959,6 +959,7 @@ async function loadState(){
   fbDb.ref(FB_YONETIM_REF).on('value', snap=>{
     const gelen = snap.val();
     if(gelen){
+      console.log('[NÖBET-DEBUG] Firebase\'den veri geldi. Gelen şifre:', gelen && gelen.ayarlar && gelen.ayarlar.yoneticiSifre, '— o anki bellekteki şifre:', state && state.ayarlar && state.ayarlar.yoneticiSifre);
       state = normalizeState(gelen);
       idbSet(IDB_KEY, state).catch(()=>{});
       ilkYonetimYuklemesiTamam = true;
@@ -966,6 +967,7 @@ async function loadState(){
       const zEl = document.getElementById('yuklemeZamani');
       if(zEl) zEl.textContent = 'ÇEVRİMİÇİDEN ALINDI: ' + new Date().toLocaleTimeString('tr-TR');
     } else if(!ilkYonetimYuklemesiTamam){
+      console.log('[NÖBET-DEBUG] Firebase\'de HİÇ veri yok (ilk kurulum dalına giriliyor).');
       // Firebase'de bu isim altında henüz hiç yönetim verisi yok (gerçek
       // ilk kurulum). Bu durumda cihazda daha önceden görülmüş bir kopya
       // varsa onu, yoksa varsayılan (boş) durumu Firebase'e ilk kayıt
@@ -1019,6 +1021,7 @@ async function saveState(){
     console.error('saveState: state JSON\'a çevrilemedi', e, state);
     return false;
   }
+  console.log('[NÖBET-DEBUG] saveState: Firebase\'e YAZILACAK şifre:', temizState && temizState.ayarlar && temizState.ayarlar.yoneticiSifre);
   let basarili = false;
   const p = fbDb.ref(FB_YONETIM_REF).set(temizState).then(()=>{
     if(el) el.textContent = 'KAYDEDİLDİ ✓ (ÇEVRİMİÇİ)';
@@ -4120,7 +4123,9 @@ function bindEvents(){
   if(bSaveSifre) bSaveSifre.onclick = async ()=>{
     const yeni = valRaw('yoneticiSifreInput').trim();
     if(!yeni) return showAlert('ŞİFRE BOŞ OLAMAZ.');
+    console.log('[NÖBET-DEBUG] Şifre kaydet tıklandı. Yazılan yeni şifre:', yeni);
     state.ayarlar.yoneticiSifre = yeni;
+    console.log('[NÖBET-DEBUG] state.ayarlar.yoneticiSifre şu an bellekte:', state.ayarlar.yoneticiSifre);
     bSaveSifre.disabled = true;
     bSaveSifre.textContent = 'KAYDEDİLİYOR…';
     // Burada bilerek saveState()'in ÇEVRİMİÇİ yazmayı bitirmesini
@@ -4128,6 +4133,7 @@ function bindEvents(){
     // ulaşmadan (hatta hiç ulaşmadan) gösterilmiş olabilir — tam da
     // yaşadığınız "değişiklik görünmüyor" sorununun kaynağı buydu.
     const basarili = await saveState();
+    console.log('[NÖBET-DEBUG] saveState bitti. başarılı mı:', basarili, '— bellekteki şifre şimdi:', state.ayarlar.yoneticiSifre);
     render();
     if(basarili){
       showAlert('YÖNETİCİ ŞİFRESİ GÜNCELLENDİ VE ÇEVRİMİÇİ KAYDEDİLDİ.\n\nArtık hangi cihazdan girerseniz girin bu YENİ şifre geçerli.');
