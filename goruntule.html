@@ -223,6 +223,34 @@ table.data td.hucre-duz:hover .hucre-kalem-ico{opacity:.7;}
 .stat-total.stat-low .stat-total-num{color:var(--gold);}
 .stat-total.stat-low .stat-bar-fill{background:var(--gold);}
 
+/* İSTATİSTİKLER sekmesi — dar ekranlarda dokunarak açılan kartlar,
+   geniş ekranlarda tam tablo. (Bu iki sınıf uzun süredir JS tarafında
+   üretiliyordu ama karşılığı olan stiller hiç eklenmemişti.) */
+.mobile-cards{display:block;}
+.desktop-table{display:none;}
+@media screen and (min-width: 901px){
+  .mobile-cards{display:none;}
+  .desktop-table{display:block;}
+}
+.stat-row{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;background:var(--card);}
+.stat-row-head{padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;-webkit-user-select:none;user-select:none;}
+.stat-row-head .stat-ad{flex:1;font-weight:800;font-size:13px;color:var(--text);}
+.stat-row-head .stat-num{font-weight:800;font-size:14px;color:var(--navy);flex:0 0 auto;min-width:24px;text-align:right;}
+.stat-row-head .stat-num.stat-high{color:var(--danger);}
+.stat-row-head .stat-num.stat-low{color:var(--gold);}
+.stat-row-head .stat-bar-fill.stat-high{background:var(--danger);}
+.stat-row-head .stat-bar-fill.stat-low{background:var(--gold);}
+.stat-row-body{display:none;padding:0 14px 14px;}
+.stat-row.expanded .stat-row-body{display:block;}
+.stat-row .chevron{margin-left:2px;color:var(--muted);font-size:11px;transition:transform .15s;}
+.stat-row.expanded .chevron{transform:rotate(180deg);}
+.stat-pill-group{margin-top:8px;}
+.stat-pill-group-title{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.3px;margin-bottom:6px;}
+.stat-pill{display:inline-block;background:var(--navy-soft);color:var(--navy);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin:0 5px 5px 0;}
+.stat-num-cell{font-weight:800;color:var(--navy);}
+.stat-num-cell.stat-high{color:var(--danger);}
+.stat-num-cell.stat-low{color:var(--gold);}
+
 .stat-mini-row{display:flex;gap:14px;flex-wrap:wrap;}
 .stat-mini{flex:1 1 150px;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 15px;}
 .stat-mini .ico{width:38px;height:38px;border-radius:10px;background:var(--navy-soft);color:var(--navy);align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
@@ -433,9 +461,18 @@ td.cekilis-cell-flash{background:#FFF6E5 !important;box-shadow:inset 0 0 0 2px v
   button.btn.small{padding:9px 13px;font-size:12px;min-height:38px;}
 
   .subtabs{gap:6px;}
-  .subtabs button{padding:10px 14px;font-size:12px;min-height:40px;}
+  .subtabs{display:grid;grid-template-columns:1fr 1fr;}
+  .subtabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:5px;padding:10px 6px;font-size:11px;line-height:1.2;min-height:56px;white-space:normal;}
+  .subtabs button .ico{font-size:16px;}
 
   .pill{padding:7px 13px;font-size:12px;margin:3px 5px 3px 0;}
+  .chipbar{gap:6px;}
+  .chipbar button{padding:6px 11px;font-size:11px;}
+
+  .stat-mini-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .stat-mini{flex:none;padding:11px 10px;gap:9px;}
+  .stat-mini .stat-mini-num{font-size:18px;}
+  .stat-mini .stat-mini-label{font-size:10px;}
 
   .action-bar{gap:9px;}
   .action-bar .btn{flex:1 1 auto;}
@@ -2881,15 +2918,15 @@ function renderIstisnaTabloIcerik(grup){
   if(!rows){
     const hicYok = !state.istisnalar.some(i=>i.grup===grup);
     const msg = hicYok ? 'BU GRUP İÇİN İSTİSNA TANIMLANMADI.' : 'ARAMA/FİLTREYE UYAN İSTİSNA BULUNAMADI.';
-    return `<table class="data" style="margin-top:14px;">
+    return `<div class="table-scroll"><table class="data" style="margin-top:14px;">
       <tr><th>ÖĞRETMEN</th><th>TÜR</th><th>YER(LER) / GÜN KISITI</th><th>İŞLEM</th></tr>
       <tr><td colspan="4" class="empty">${msg}</td></tr>
-    </table>`;
+    </table></div>`;
   }
-  return `<table class="data" style="margin-top:14px;">
+  return `<div class="table-scroll"><table class="data" style="margin-top:14px;">
     <tr><th>ÖĞRETMEN</th><th>TÜR</th><th>YER(LER) / GÜN KISITI</th><th>İŞLEM</th></tr>
     ${rows}
-  </table>`;
+  </table></div>`;
 }
 
 // Arama kutusuna yazarken ya da tür çipine tıklarken TÜM sayfayı yeniden
@@ -4417,6 +4454,7 @@ function renderIstatistikIcerik(grup){
           <div class="stat-bar-track"><div class="stat-bar-fill ${cls}" style="width:${barPct}%"></div></div>
         </div>
         <div class="stat-num ${cls}">${s.total}</div>
+        <span class="chevron">▾</span>
       </div>
       <div class="stat-row-body">
         <div class="stat-pill-group">
