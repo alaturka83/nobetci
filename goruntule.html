@@ -3446,9 +3446,9 @@ function renderIstatistik(){
   const maxTotal = totals.length ? Math.max(...totals) : 0;
   const avgTotal = totals.length ? (totals.reduce((a,b)=>a+b,0) / totals.length) : 0;
 
-  const rows = statList.sort((a,b)=>a.ad.localeCompare(b.ad,'tr')).map(st=>{
-    const dayPills = GUNLER.map(g=>`<span class="pill">${g.slice(0,3)}: ${st.days[g]||0}</span>`).join('');
-    const placePills = yerler.map(y=>`<span class="pill">${esc(y.ad)}: ${st.places[y.id]||0}</span>`).join('');
+  const rowsDesktop = statList.sort((a,b)=>a.ad.localeCompare(b.ad,'tr')).map(st=>{
+    const dayPills = GUNLER.map(g=>`<span class="stat-pill">${g.slice(0,3)}: ${st.days[g]||0}</span>`).join('');
+    const placePills = yerler.map(y=>`<span class="stat-pill">${esc(y.ad)}: ${st.places[y.id]||0}</span>`).join('');
     // Ortalamadan %25'ten fazla sapan değerler "aykırı" sayılır: yüksek olan
     // (kırmızı) fazla yüklenmiş, düşük olan (altın) az yüklenmiş anlamına gelir —
     // adaletsiz dağılım tabloya girmeden, bir bakışta fark edilsin diye.
@@ -3461,15 +3461,45 @@ function renderIstatistik(){
     return `
     <tr>
       <td style="text-align:left;font-weight:700;">${esc(st.ad)}</td>
-      <td>
-        <div class="stat-total ${outlierCls}">
-          <span class="stat-total-num">${st.total}</span>
-          <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${barPct}%"></div></div>
-        </div>
+      <td class="stat-num-cell ${outlierCls}">
+        ${st.total}
+        <div class="stat-bar-track"><div class="stat-bar-fill ${outlierCls}" style="width:${barPct}%"></div></div>
       </td>
       <td>${dayPills}</td>
       <td>${placePills}</td>
     </tr>`;
+  }).join('');
+
+  const rowsMobile = statList.sort((a,b)=>a.ad.localeCompare(b.ad,'tr')).map(st=>{
+    const dayPills = GUNLER.map(g=>`<span class="stat-pill">${g.slice(0,3)}: ${st.days[g]||0}</span>`).join('');
+    const placePills = yerler.map(y=>`<span class="stat-pill">${esc(y.ad)}: ${st.places[y.id]||0}</span>`).join('');
+    let outlierCls = '';
+    if(avgTotal > 0 && st.total > 0){
+      if(st.total >= avgTotal * 1.25) outlierCls = 'stat-high';
+      else if(st.total <= avgTotal * 0.75) outlierCls = 'stat-low';
+    }
+    const barPct = maxTotal > 0 ? Math.round((st.total / maxTotal) * 100) : 0;
+    return `
+    <div class="stat-row">
+      <div class="stat-row-head">
+        <div style="flex:1;">
+          <div class="stat-ad">${esc(st.ad)}</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill ${outlierCls}" style="width:${barPct}%"></div></div>
+        </div>
+        <div class="stat-num ${outlierCls}">${st.total}</div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="stat-row-body">
+        <div class="stat-pill-group">
+          <div class="stat-pill-group-title">GÜN DAĞILIMI</div>
+          ${dayPills}
+        </div>
+        <div class="stat-pill-group">
+          <div class="stat-pill-group-title">YER DAĞILIMI</div>
+          ${placePills}
+        </div>
+      </div>
+    </div>`;
   }).join('');
 
   return `
@@ -3483,10 +3513,12 @@ function renderIstatistik(){
       <button data-act="istatistikGrup" data-grup="sabah" class="${grup==='sabah'?'active':''}">SABAHÇI GRUBU (${state.ogretmenler.sabah.length} ÖĞRETMEN)</button>
       <button data-act="istatistikGrup" data-grup="oglen" class="${grup==='oglen'?'active':''}">ÖĞLENCİ GRUBU (${state.ogretmenler.oglen.length} ÖĞRETMEN)</button>
     </div>
-    <div class="table-scroll">
+    <p class="desc mobile-cards" style="margin-top:10px;">İSİMLERİN ÜZERİNE DOKUNARAK GÜN VE YER DAĞILIMINI GÖREBİLİRSİNİZ.</p>
+    <div class="mobile-cards" style="margin-top:8px;">${rowsMobile}</div>
+    <div class="desktop-table table-scroll">
     <table class="data">
       <tr><th>ÖĞRETMEN ADI</th><th>TOPLAM NÖBET</th><th>GÜN DAĞILIMI</th><th>YER DAĞILIMI</th></tr>
-      ${rows}
+      ${rowsDesktop}
     </table>
     </div>
   </div>`;
@@ -4221,6 +4253,7 @@ function bindEvents(){
   };
 
   qa('[data-act=istatistikGrup]').forEach(b=>b.onclick=()=>{ istatistikGrup=b.dataset.grup; render(); });
+  qa('.stat-row-head').forEach(t=>t.onclick=()=>{ t.parentElement.classList.toggle('expanded'); });
   qa('[data-act=exportExcel]').forEach(b=>b.onclick=()=>exportToExcel());
 
   qa('[data-act=yazGrup]').forEach(b=>b.onclick=()=>{ yazdirGrup=b.dataset.grup; yazdirSecili={ay:'TUMU',yer:'',ogretmen:''}; render(); });
