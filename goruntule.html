@@ -1015,10 +1015,12 @@ async function saveState(){
   }catch(e){
     if(el) el.textContent = 'KAYIT HATASI: VERİ FORMATI BOZUK GÖRÜNÜYOR (' + e.message + ').';
     console.error('saveState: state JSON\'a çevrilemedi', e, state);
-    return;
+    return false;
   }
+  let basarili = false;
   const p = fbDb.ref(FB_YONETIM_REF).set(temizState).then(()=>{
     if(el) el.textContent = 'KAYDEDİLDİ ✓ (ÇEVRİMİÇİ)';
+    basarili = true;
   }).catch((e)=>{
     console.error('saveState: Firebase\'e yazılamadı', e);
     const isQuota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
@@ -1035,6 +1037,7 @@ async function saveState(){
   kayitBekleniyorMu = true;
   sonKayitPromise = p;
   await p;
+  return basarili;
 }
 // Sekme/pencere kapatılırken (veya arka plana alınırken) son durumu bir kez
 // daha diske yazar. saveState() her işlemden sonra zaten çağrılıyor olsa da,
@@ -4112,13 +4115,22 @@ function bindEvents(){
   });
 
   const bSaveSifre = q('[data-act=saveYoneticiSifre]');
-  if(bSaveSifre) bSaveSifre.onclick = ()=>{
+  if(bSaveSifre) bSaveSifre.onclick = async ()=>{
     const yeni = valRaw('yoneticiSifreInput').trim();
     if(!yeni) return showAlert('ŞİFRE BOŞ OLAMAZ.');
     state.ayarlar.yoneticiSifre = yeni;
-    saveState();
+    bSaveSifre.disabled = true;
+    bSaveSifre.textContent = 'KAYDEDİLİYOR…';
+    // Burada bilerek saveState()'in ÇEVRİMİÇİ yazmayı bitirmesini
+    // BEKLİYORUZ: aksi halde "güncellendi" mesajı, veri Firebase'e
+    // ulaşmadan (hatta hiç ulaşmadan) gösterilmiş olabilir — tam da
+    // yaşadığınız "değişiklik görünmüyor" sorununun kaynağı buydu.
+    const basarili = await saveState();
     render();
-    showAlert('YÖNETİCİ ŞİFRESİ GÜNCELLENDİ.');
+    if(basarili){
+      showAlert('YÖNETİCİ ŞİFRESİ GÜNCELLENDİ VE ÇEVRİMİÇİ KAYDEDİLDİ.\n\nArtık hangi cihazdan girerseniz girin bu YENİ şifre geçerli.');
+    }
+    // Başarısızsa saveState() zaten kendi kırmızı uyarı penceresini gösterdi.
   };
 
   qa('[data-act=istatistikGrup]').forEach(b=>b.onclick=()=>{ istatistikGrup=b.dataset.grup; render(); });
@@ -4150,11 +4162,14 @@ function bindEvents(){
     const file = e.target.files[0];
     if(!file) return;
     importBackupJSON(file,
-      (parsed)=>{
+      async (parsed)=>{
         state = parsed;
-        saveState();
+        const basarili = await saveState();
         render();
-        showAlert('YEDEK DOSYASI BAŞARIYLA YÜKLENDİ.');
+        if(basarili){
+          showAlert('YEDEK DOSYASI BAŞARIYLA YÜKLENDİ VE ÇEVRİMİÇİ KAYDEDİLDİ.');
+        }
+        // Başarısızsa saveState() zaten kendi kırmızı uyarı penceresini gösterdi.
       },
       (errMsg)=> showAlert(errMsg)
     );
