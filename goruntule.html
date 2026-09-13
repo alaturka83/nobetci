@@ -128,7 +128,8 @@ main.content{margin-left:var(--sidebar-w);flex:1;padding:32px 34px 64px;max-widt
   .mobile-bottom-nav button.active .ico{color:var(--accent);}
   .mobile-bottom-nav button:active{background:rgba(255,255,255,.1);}
 
-  main.content{margin-left:0;max-width:100vw;padding:72px 16px 82px;}
+  main.content{margin-left:0;max-width:100vw;padding:72px 16px 82px;overflow-x:hidden;}
+  body{overflow-x:hidden;}
 }
 
 @media screen and (max-width: 520px){
@@ -456,6 +457,9 @@ td.cekilis-cell-flash{background:#FFF6E5 !important;box-shadow:inset 0 0 0 2px v
   .row{gap:11px;}
   .field{min-width:0;flex:1 1 160px;}
   select{min-width:0;width:100%;}
+  .field-grid{grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));}
+  .field-grid .f-narrow{max-width:none;}
+  .period-list{grid-template-columns:1fr;}
 
   button.btn{padding:12px 17px;font-size:13px;min-height:44px;}
   button.btn.small{padding:9px 13px;font-size:12px;min-height:38px;}
