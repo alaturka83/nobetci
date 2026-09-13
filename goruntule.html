@@ -529,6 +529,7 @@ td.cekilis-cell-flash{background:#FFF6E5 !important;box-shadow:inset 0 0 0 2px v
   </nav>
   <div class="sidebar-footer">
     <span id="saveStatus">KAYDEDİLDİ ✓</span>
+    <span id="yuklemeZamani" style="display:block;font-size:9.5px;color:#8FA3C4;margin-top:4px;"></span>
     <button id="btnCikisYap" class="btn outline small" style="margin-top:8px;width:100%;">ÇIKIŞ YAP (ÖĞRETMEN MODUNA DÖN)</button>
   </div>
 </aside>
@@ -945,29 +946,16 @@ function normalizeState(loaded){
 
 
 async function loadState(){
-  // Cihazda daha önce görülen bir kopya varsa, Firebase'den yanıt gelene
-  // kadar ekranda BOŞ beklemek yerine önce onu gösteririz (anında açılış
-  // hissi + internet kesikken de son görülen veriyle devam edebilme).
-  let cached = null;
-  try{
-    cached = await idbGet(IDB_KEY);
-  }catch(e){ cached = null; }
-  if(!cached){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){
-        cached = JSON.parse(raw);
-        try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
-      }
-    }catch(e){}
-  }
-  state = normalizeState(cached);
-  render();
+  // ÖNEMLİ: Burada BİLEREK yerel (IndexedDB) kopyayı göstermiyoruz. Daha
+  // önce "önce yerelden göster, sonra Firebase gelince güncelle" şeklinde
+  // çalışıyordu; ama bu, tarayıcıda eski bir yerel kopya varsa, kullanıcının
+  // "veriler sıfırlandı/eskiye döndü" sanmasına yol açabiliyordu. Artık
+  // yönetici moduna girildiğinde EKRANDA BEKLEME GÖSTERİLİR ve İLK GERÇEK
+  // İÇERİK ANCAK Firebase'den yanıt geldikten sonra çizilir — böylece
+  // gösterilen veri her zaman gerçekten güncel olur.
+  const mainEl = document.getElementById('main');
+  if(mainEl) mainEl.innerHTML = '<div class="card"><p style="text-align:center;padding:30px 10px;color:var(--muted);">ÇEVRİMİÇİ VERİLER YÜKLENİYOR…</p></div>';
 
-  // ASIL/GÜNCEL veri kaynağı artık Firebase'dir: doğru şifreyle hangi
-  // cihazdan/tarayıcıdan girilirse girilsin AYNI veri görülür ve
-  // düzenlenebilir. Canlı dinleyici sayesinde başka bir cihazda yapılan
-  // bir değişiklik de (sayfa yenilenmeden) burada anında görünür.
   fbDb.ref(FB_YONETIM_REF).on('value', snap=>{
     const gelen = snap.val();
     if(gelen){
@@ -975,13 +963,24 @@ async function loadState(){
       idbSet(IDB_KEY, state).catch(()=>{});
       ilkYonetimYuklemesiTamam = true;
       render();
+      const zEl = document.getElementById('yuklemeZamani');
+      if(zEl) zEl.textContent = 'ÇEVRİMİÇİDEN ALINDI: ' + new Date().toLocaleTimeString('tr-TR');
     } else if(!ilkYonetimYuklemesiTamam){
-      // Firebase'de bu isim altında henüz hiç yönetim verisi yok (ilk
-      // kurulum ya da ilk kez bu birleşik sürüme geçiliyor): cihazda
-      // varsa onu, yoksa varsayılan durumu Firebase'e ilk kayıt olarak
-      // yazıyoruz; böylece "asıl kaynak" oradan itibaren oluşmuş olur.
+      // Firebase'de bu isim altında henüz hiç yönetim verisi yok (gerçek
+      // ilk kurulum). Bu durumda cihazda daha önceden görülmüş bir kopya
+      // varsa onu, yoksa varsayılan (boş) durumu Firebase'e ilk kayıt
+      // olarak yazıyoruz; böylece "asıl kaynak" oradan itibaren oluşmuş
+      // olur. NOT: normal kullanımda buraya hiç düşülmemesi beklenir —
+      // Firebase'de veri varken bu dala girilmesi bir bağlantı/izin
+      // sorununa işaret eder.
       ilkYonetimYuklemesiTamam = true;
-      saveState();
+      (async ()=>{
+        let cached = null;
+        try{ cached = await idbGet(IDB_KEY); }catch(e){ cached = null; }
+        state = normalizeState(cached);
+        saveState();
+        render();
+      })();
     }
   }, err=>{
     const el = document.getElementById('saveStatus');
