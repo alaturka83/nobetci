@@ -277,7 +277,14 @@ function formatDateTR(dateStr){
   return p[2] + '.' + p[1] + '.' + p[0];
 }
 
+// Yönetim panelinde bir hücre manuel olarak düzeltildiğinde (örn. raporlu
+// bir öğretmenin yerine geçici biri yazıldığında), o kişi öğretmen
+// listesinde olmayabilir; kimliği "MANUAL::İSİM" biçiminde gelir.
+const MANUEL_ON_EK = 'MANUAL::';
+function manuelMi(id){ return typeof id === 'string' && id.indexOf(MANUEL_ON_EK) === 0; }
+
 function ogretmenAd(grup, id){
+  if(manuelMi(id)) return esc(id.slice(MANUEL_ON_EK.length));
   const list = (veri.ogretmenler && veri.ogretmenler[grup]) || [];
   const o = list.find(x=>x.id===id);
   return o ? esc(o.ad) : '';
@@ -794,20 +801,33 @@ function render(){
   });
 }
 
+// Bu fonksiyon artık tek seferlik değil, CANLI bir Firebase dinleyicisi
+// kurar: yönetim panelinde bir dağıtım kaydedildiğinde/yayınlandığında ya
+// da tek bir hücre manuel düzeltildiğinde, bu ekran öğretmen hiçbir şeye
+// dokunmadan ANINDA güncellenir. İlk yüklemede (sayfa ilk açıldığında)
+// bugüne en yakın ayı otomatik seçeriz; sonraki canlı güncellemelerde ise
+// kullanıcının o an baktığı sekme/ay/filtre seçimini BOZMADAN sadece veri
+// tazelenip ekran yeniden çizilir.
+let ilkYuklemeTamam = false;
+
 function yukle(){
-  document.getElementById('app').innerHTML = '<div class="msg">YÜKLENİYOR…</div>';
-  fbDb.ref('nobetListesi').once('value')
-    .then(snap=>{
-      veri = snap.val();
+  if(!ilkYuklemeTamam){
+    document.getElementById('app').innerHTML = '<div class="msg">YÜKLENİYOR…</div>';
+  }
+  fbDb.ref('nobetListesi').off('value');
+  fbDb.ref('nobetListesi').on('value', snap=>{
+    veri = snap.val();
+    if(!ilkYuklemeTamam){
       const donemler = veri && veri.dagitimlar ? (veri.dagitimlar[aktifGrup] || []) : [];
       const sonDonem = donemler.length ? donemler[donemler.length - 1] : null;
       aktifAyIdx = sonDonem ? varsayilanAyIdx(sonDonem.aylar || []) : 0;
-      render();
+      ilkYuklemeTamam = true;
       asistanIlkYuklemeyiIsaretle();
-    })
-    .catch(err=>{
-      document.getElementById('app').innerHTML = '<div class="msg">VERİ YÜKLENEMEDİ: ' + esc(err.message) + '</div>';
-    });
+    }
+    render();
+  }, err=>{
+    document.getElementById('app').innerHTML = '<div class="msg">VERİ YÜKLENEMEDİ: ' + esc(err.message) + '</div>';
+  });
 }
 
 /* ==============================================================
