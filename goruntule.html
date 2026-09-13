@@ -956,24 +956,30 @@ async function loadState(){
   const mainEl = document.getElementById('main');
   if(mainEl) mainEl.innerHTML = '<div class="card"><p style="text-align:center;padding:30px 10px;color:var(--muted);">ÇEVRİMİÇİ VERİLER YÜKLENİYOR…</p></div>';
 
+  let gercekVeriGoruldu = false;
   fbDb.ref(FB_YONETIM_REF).on('value', snap=>{
     const gelen = snap.val();
     console.log('[NÖBET-DEBUG] Firebase\'den veri geldi. Gelen şifre:', gelen && gelen.ayarlar && gelen.ayarlar.yoneticiSifre, '— o anki bellekteki şifre:', state && state.ayarlar && state.ayarlar.yoneticiSifre);
     if(gelen){
       state = normalizeState(gelen);
       idbSet(IDB_KEY, state).catch(()=>{});
-    } else {
-      // Firebase'de bu isim altında (görünürde) hiç yönetim verisi yok.
-      // ÖNEMLİ GÜVENLİK KARARI: burada KESİNLİKLE yerel/varsayılan veriyi
-      // otomatik olarak Firebase'e YAZMIYORUZ. Böyle bir otomatik yazma,
-      // Firebase'in geçici/hatalı bir "boş" yanıt verdiği herhangi bir an
-      // (bağlantı titremesi, ilk el sıkışma vb.) GERÇEK verinin sessizce
-      // silinip eskiyle değiştirilmesine yol açabilirdi — yaşanan
-      // "şifre/veri eskiye dönüyor" sorununun asıl kaynağı buydu. Ekranda
-      // boş/varsayılan bir durum gösterilir; kayıt YALNIZCA siz bilerek
-      // bir işlem yaptığınızda (ör. bir ayarı kaydettiğinizde ya da
-      // yedekten yüklediğinizde) gerçekleşir.
+      gercekVeriGoruldu = true;
+    } else if(!gercekVeriGoruldu){
+      // Firebase'de bu isim altında (görünürde) hiç yönetim verisi yok VE
+      // bu oturumda daha önce hiç gerçek veri görmedik — muhtemelen gerçek
+      // ilk kurulum. ÖNEMLİ GÜVENLİK KARARI: burada KESİNLİKLE yerel/
+      // varsayılan veriyi otomatik olarak Firebase'e YAZMIYORUZ; sadece
+      // ekranda boş/varsayılan bir durum GÖSTERİYORUZ. Kayıt YALNIZCA siz
+      // bilerek bir işlem yaptığınızda gerçekleşir.
       state = normalizeState(null);
+    } else {
+      // Bu oturumda DAHA ÖNCE gerçek veri görmüştük; şimdi aniden "boş"
+      // bir sinyal geldi. Bu neredeyse kesinlikle geçici/hatalı bir
+      // sinyaldir (gerçek veri silinmiş olamaz — az önce oradaydı). Bu
+      // yüzden BUNU YOK SAYIYORUZ: ekranda hâlâ SON BİLİNEN GERÇEK veriyi
+      // gösteriyoruz, hiçbir şeyi sıfırlamıyoruz.
+      console.warn('[NÖBET-DEBUG] Daha önce gerçek veri görülmüştü, şimdi gelen "boş" sinyal YOK SAYILDI.');
+      return;
     }
     ilkYonetimYuklemesiTamam = true;
     render();
@@ -1016,7 +1022,48 @@ async function saveState(){
     console.error('saveState: state JSON\'a çevrilemedi', e, state);
     return false;
   }
+
+  // GÜVENLİK KİLİDİ: Buraya kadar hangi kod yolundan gelinirse gelinsin,
+  // eksik/bozuk görünen (ör. ayarlar veya nöbet yerleri hiç yoksa) bir
+  // "state" Firebase'e YAZILAMAZ. Bu, olası bir arka planda açık kalmış
+  // eski sekmenin veya beklenmeyen bir kod yolunun gerçek verinin üzerine
+  // BOŞ/varsayılan veri yazmasını önlemek için son bir güvenlik önlemidir.
+  const geçerliMi = temizState
+    && typeof temizState === 'object'
+    && temizState.ayarlar && typeof temizState.ayarlar === 'object'
+    && temizState.ogretmenler && typeof temizState.ogretmenler === 'object'
+    && Array.isArray(temizState.yerler) && temizState.yerler.length > 0
+    && temizState.dagitimlar && typeof temizState.dagitimlar === 'object';
+  if(!geçerliMi){
+    console.error('[NÖBET-DEBUG] GÜVENLİK KİLİDİ DEVREDE: eksik/bozuk state Firebase\'e YAZILMADI.', temizState);
+    if(el) el.textContent = 'KAYIT ENGELLENDİ: VERİ EKSİK GÖRÜNÜYORDU (GÜVENLİK KİLİDİ).';
+    try{ showAlert('GÜVENLİK KİLİDİ DEVREYE GİRDİ!\n\nKaydedilecek veri eksik/bozuk göründüğü için buluta YAZILMADI (gerçek verileriniz korundu). Lütfen sayfayı bir kez daha yükleyip tekrar deneyin ve bana bildirin.'); }catch(e2){}
+    return false;
+  }
+
   console.log('[NÖBET-DEBUG] saveState: Firebase\'e YAZILACAK şifre:', temizState && temizState.ayarlar && temizState.ayarlar.yoneticiSifre);
+
+  // EK GÜVENLİK KİLİDİ: yazmadan hemen önce buluttaki MEVCUT öğretmen
+  // sayısına bakıyoruz. Eğer bulutta zaten birçok öğretmen kayıtlıyken bu
+  // yazma işlemi listeyi SIFIRA indirecekse (ör. başka bir sekmeden/eski
+  // bir oturumdan gelen boş bir state yanlışlıkla buraya karışmışsa), bunu
+  // GERÇEK bir "tüm öğretmenleri sil" isteğinden ayırt edemesek de, en
+  // azından yazmayı durdurup uyarıyoruz — sessizce silinmesindense.
+  try{
+    const mevcutSnap = await fbDb.ref(FB_YONETIM_REF + '/ogretmenler').once('value');
+    const mevcut = mevcutSnap.val();
+    const mevcutSayi = (mevcut && (((mevcut.sabah||[]).length) + ((mevcut.oglen||[]).length))) || 0;
+    const yeniSayi = ((temizState.ogretmenler.sabah||[]).length) + ((temizState.ogretmenler.oglen||[]).length);
+    if(mevcutSayi >= 5 && yeniSayi === 0){
+      console.error('[NÖBET-DEBUG] GÜVENLİK KİLİDİ: öğretmen listesi', mevcutSayi, '-> 0 olacaktı, YAZMA ENGELLENDİ.');
+      if(el) el.textContent = 'KAYIT ENGELLENDİ: TÜM ÖĞRETMENLER SİLİNMEK ÜZEREYDİ (GÜVENLİK KİLİDİ).';
+      try{ showAlert('GÜVENLİK KİLİDİ DEVREYE GİRDİ!\n\nBu işlem buluttaki ' + mevcutSayi + ' öğretmeni SIFIRA indirecekti. Olası bir hata/çakışma ihtimaline karşı bu kayıt YAPILMADI — gerçek verileriniz korundu. Lütfen sayfayı yeniden yükleyip tekrar deneyin ve bana bildirin.'); }catch(e2){}
+      return false;
+    }
+  }catch(e){
+    console.warn('[NÖBET-DEBUG] Öğretmen sayısı ön-kontrolü yapılamadı, devam ediliyor.', e);
+  }
+
   let basarili = false;
   const p = fbDb.ref(FB_YONETIM_REF).set(temizState).then(()=>{
     if(el) el.textContent = 'KAYDEDİLDİ ✓ (ÇEVRİMİÇİ)';
