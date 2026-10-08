@@ -498,29 +498,33 @@ td.cekilis-cell-flash{background:#FFF6E5 !important;box-shadow:inset 0 0 0 2px v
 }
 
 @media print{
-  @page{ size: landscape; margin: 13mm; }
+  @page{ size: landscape; margin: 9mm 11mm; }
   aside.sidebar, .no-print, header.app, nav, .modal-overlay, .cekilis-modal-overlay { display:none !important; }
   body { background: #fff !important; color: #000 !important; font-size: 11pt; text-transform: uppercase; margin: 0; padding: 0; font-family: Arial, "Segoe UI", sans-serif; }
   main.content { margin: 0 !important; max-width: 100% !important; padding: 0 !important; }
   .card { border: none !important; box-shadow: none !important; padding: 0 !important; margin-bottom: 0 !important; background: transparent !important; }
   .table-scroll { overflow: visible !important; width: 100% !important; border: none !important; }
 
-  .schedule-header-wrap { margin-bottom: 22px !important; display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: space-between !important; text-align: center !important; }
-  .schedule-header-logo-box { width: 100px !important; height: 100px !important; }
-  .schedule-header-logo { max-width: 90px !important; max-height: 90px !important; }
+  .schedule-header-wrap { margin-bottom: 10px !important; display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: space-between !important; text-align: center !important; }
+  .schedule-header-logo-box { width: 78px !important; height: 78px !important; }
+  .schedule-header-logo { max-width: 74px !important; max-height: 74px !important; }
+  .schedule-header-placeholder { width: 78px !important; }
   .schedule-title h2 { display: block !important; font-size: 18px !important; color: #000 !important; margin: 2px 0 !important; font-weight: 800 !important; }
   .schedule-title .period { font-size: 15px !important; color: #000 !important; font-weight: 800 !important; margin-top: 4px !important; }
   .schedule-title .period.period-tarih { background: #E7EEFB !important; padding: 3px 16px !important; border-radius: 10px !important; display: inline-block !important; }
 
   table.schedule { width: 94% !important; margin: 8px auto 0 !important; border-collapse: collapse !important; table-layout: fixed !important; min-width: 0 !important; }
-  table.schedule th, table.schedule td { border: 1.5px solid #000 !important; padding: 6px 4px !important; font-size: 11.5px !important; color: #000 !important; text-align: center !important; }
+  table.schedule th, table.schedule td { border: 1.5px solid #000 !important; padding: 4px 4px !important; font-size: 11px !important; line-height: 1.25 !important; color: #000 !important; text-align: center !important; }
   table.schedule th { background: #f0f0f0 !important; font-size: 12.5px !important; font-weight: 800 !important; }
   table.schedule td.yer { font-weight: 800 !important; background: #fafafa !important; font-size: 12px !important; }
 
-  .notes { font-size: 10.5px !important; color: #000 !important; margin-top: 22px !important; line-height: 1.4; }
-  .sign-container { margin-top: 60px !important; display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; align-items: flex-start !important; padding: 0 8% !important; gap: 0 !important; font-size: 11.5px !important; }
+  .notes { font-size: 9.5px !important; color: #000 !important; margin-top: 10px !important; line-height: 1.3; }
+  .notes p { margin: 1px 0 !important; }
+  .sign-container { margin-top: 18px !important; page-break-inside: avoid !important; break-inside: avoid !important; display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; align-items: flex-start !important; padding: 0 8% !important; gap: 0 !important; font-size: 11.5px !important; }
   .sign-box { width: 240px !important; max-width: 240px !important; }
-  .sign-box .name { font-weight: 800 !important; margin-top: 28px !important; color: #000 !important; }
+  .sign-box .date-line { margin-bottom: 6px !important; }
+  .sign-box .name { font-weight: 800 !important; margin-top: 14px !important; color: #000 !important; }
+  #printArea .card { page-break-inside: avoid !important; break-inside: avoid !important; }
   .page-break { page-break-after: always !important; break-after: page !important; }
 }
 
@@ -3805,7 +3809,7 @@ function renderYazdir(){
     aylar.map(a=>`<option value="${a.ay}" ${yazdirSecili.ay===a.ay?'selected':''}>${a.ayEtiket}</option>`).join('');
 
   const yerOptions = `<option value="">TÜM YERLER</option>` + state.yerler.map(y=>`<option value="${y.id}" ${yazdirSecili.yer===y.id?'selected':''}>${esc(y.ad)}</option>`).join('');
-  const ogrOptions = `<option value="">TÜM ÖĞRETMENLER</option>` + state.ogretmenler[grup].map(o=>`<option value="${o.id}" ${yazdirSecili.ogretmen===o.id?'selected':''}>${esc(o.ad)}</option>`).join('');
+  const ogrOptions = `<option value="">TÜM ÖĞRETMENLER</option>` + state.ogretmenler[grup].slice().sort((a,b)=>a.ad.localeCompare(b.ad,'tr')).map(o=>`<option value="${o.id}" ${yazdirSecili.ogretmen===o.id?'selected':''}>${esc(o.ad)}</option>`).join('');
 
   if(!aylar.length){
     return `
@@ -4729,7 +4733,7 @@ function renderYazdirIcerik(grup){
   const yerOptions = `<option value="">TÜM YERLER</option>` +
     yerler.map(y=>`<option value="${y.id}" ${yazdirYer===y.id?'selected':''}>${esc(y.ad)}</option>`).join('');
   const ogrOptions = `<option value="">TÜM ÖĞRETMENLER</option>` +
-    ogretmenler.map(o=>`<option value="${o.id}" ${yazdirOgretmen===o.id?'selected':''}>${esc(o.ad)}</option>`).join('');
+    ogretmenler.slice().sort((a,b)=>a.ad.localeCompare(b.ad,'tr')).map(o=>`<option value="${o.id}" ${yazdirOgretmen===o.id?'selected':''}>${esc(o.ad)}</option>`).join('');
 
   const secilenAylar = yazdirAy === 'TUMU' ? aylar : [aylar.find(a=>a.ay===yazdirAy) || aylar[0]];
 
@@ -4989,7 +4993,7 @@ function render(){
           <label>ÖĞRETMEN</label>
           <select id="filtreOgretmenSel">
             <option value="">TÜMÜ</option>
-            ${ogretmenler.map(o=>`<option value="${o.id}" ${o.id===filtreOgretmen?'selected':''}>${esc(o.ad)}</option>`).join('')}
+            ${ogretmenler.slice().sort((a,b)=>a.ad.localeCompare(b.ad,'tr')).map(o=>`<option value="${o.id}" ${o.id===filtreOgretmen?'selected':''}>${esc(o.ad)}</option>`).join('')}
           </select>
         </div>
         <div class="field">
