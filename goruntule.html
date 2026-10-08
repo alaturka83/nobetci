@@ -4461,6 +4461,8 @@ const GRUP_KISALTMA = {sabah:'SABAH', oglen:'ÖĞLE'};
 let veri = null;
 let aktifGrup = 'sabah';
 let aktifAyIdx = 0;
+// Hangi grup için 'bugünün ayı' seçildiğini tutar; grup değişince yeniden hesaplanır.
+let ayIdxGrup = null;
 let filtreYer = '';
 let filtreOgretmen = '';
 let gorunum = 'program'; // 'program' | 'istatistik' | 'yazdir'
@@ -4891,7 +4893,13 @@ function render(){
   const donemler = (veri.dagitimlar[aktifGrup] || []);
   const sonDonem = donemler.length ? donemler[donemler.length - 1] : null;
   const aylar = sonDonem ? (sonDonem.aylar || []) : [];
-  if(aktifAyIdx >= aylar.length) aktifAyIdx = 0;
+  // Sabahçı/öğlenci sekmesi ilk kez açıldığında (ya da grup değiştiğinde)
+  // takvimde içinde bulunulan ayı otomatik seç.
+  if(ayIdxGrup !== aktifGrup && aylar.length){
+    aktifAyIdx = varsayilanAyIdx(aylar);
+    ayIdxGrup = aktifGrup;
+  }
+  if(aktifAyIdx >= aylar.length) aktifAyIdx = varsayilanAyIdx(aylar);
 
   const headerHtml = `
     <div class="header">
